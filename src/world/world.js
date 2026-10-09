@@ -127,6 +127,7 @@ export class World {
   setQuality(q) {
     const low = q === "low";
     this.lowQuality = low;
+    this.ground?.material?.userData.setDetail?.(q);
     if (this.water?.material?.uniforms?.lowQuality)
       this.water.material.uniforms.lowQuality.value = low ? 1 : 0;
     if (this.ground?.material) {
@@ -189,11 +190,15 @@ export class World {
         n.animationElapsed=0;
       }
     }
+    this.spawnElapsed=(this.spawnElapsed||0)+dt;
+    let canRespawn=this.spawnElapsed>=.25;
+    if(canRespawn)this.spawnElapsed=0;
     for (const w of this.wild) {
       const wasCooling=w.cooldown>0;
       w.cooldown = Math.max(0, w.cooldown - dt);
-      if(w.id!=='gardien' && ((wasCooling && w.cooldown===0)||w.respawnPending|| Math.hypot(px-w.homeX,pz-w.homeZ)>95 || (w.spawnDay!==undefined&&w.spawnDay!==state.day))){
-       if(Math.hypot(px-w.x,pz-w.z)>20){const e=chooseEncounter(Math.random,(x,z,r)=>this.collides(x,z,r)||Math.hypot(px-x,pz-z)<20,this.wild.filter(v=>v!==w),null,{x:px,z:pz});if(e){w.mesh.removeFromParent();w.mesh.userData.dispose?.();Object.assign(w,e);w.mesh=modelCreature(species(e.id),1);this.scene.add(w.mesh);w.mesh.position.set(w.x,height(w.x,w.z),w.z);w.spawnDay=state.day;w.respawnPending=false;}}
+      if(wasCooling && w.cooldown===0 && w.id!=='gardien')w.respawnPending=true;
+      if(canRespawn && t>=(w.nextSpawnAttempt||0) && w.id!=='gardien' && ((wasCooling && w.cooldown===0)||w.respawnPending|| Math.hypot(px-w.homeX,pz-w.homeZ)>95 || (w.spawnDay!==undefined&&w.spawnDay!==state.day))){
+       if(Math.hypot(px-w.x,pz-w.z)>20){canRespawn=false;w.nextSpawnAttempt=t+2;const e=chooseEncounter(Math.random,(x,z,r)=>this.collides(x,z,r)||Math.hypot(px-x,pz-z)<20,this.wild.filter(v=>v!==w),null,{x:px,z:pz});if(e){w.mesh.removeFromParent();w.mesh.userData.dispose?.();Object.assign(w,e);w.mesh=modelCreature(species(e.id),1);this.scene.add(w.mesh);w.mesh.position.set(w.x,height(w.x,w.z),w.z);w.spawnDay=state.day;w.respawnPending=false;}}
        else if(wasCooling)w.respawnPending=true;
       }
       w.spawnDay??=state.day;

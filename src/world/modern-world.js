@@ -9,14 +9,25 @@ import {species} from '../systems/data.js';
 import {chooseEncounter} from '../systems/encounters.js';
 export function buildModernWorld(w){
  T.Cache.enabled=false;T.Cache.clear();
- const ground=terrainMesh(0,0,WORLD_SIZE,256);ground.position.y=-.075;w.scene.add(ground);w.ground=ground;w.pickSurfaces=[ground];
+ const ground=terrainMesh(0,0,WORLD_SIZE,128);ground.position.y=-.075;w.scene.add(ground);w.ground=ground;w.pickSurfaces=[ground];
  const waterMaterial=new T.MeshStandardMaterial({color:'#478f9b',roughness:.23,metalness:.28,transparent:true,opacity:.91});
  waterMaterial.uniforms={time:{value:0},sun:{value:1},lowQuality:{value:0}};waterMaterial.userData.cutawayExcluded=true;
- waterMaterial.onBeforeCompile=s=>{s.uniforms.uWaterTime=waterMaterial.uniforms.time;s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWater;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWater=(modelMatrix*vec4(position,1.)).xyz;');s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nuniform float uWaterTime; varying vec3 vWater;').replace('#include <color_fragment>','#include <color_fragment>\nfloat wave=sin(vWater.x*1.7+uWaterTime)*sin(vWater.z*1.2-uWaterTime*.7);diffuseColor.rgb*=.93+wave*.075;');};
+ waterMaterial.onBeforeCompile=s=>{
+  s.uniforms.uWaterTime=waterMaterial.uniforms.time;s.uniforms.uWaterLow=waterMaterial.uniforms.lowQuality;
+  s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWater;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWater=(modelMatrix*vec4(position,1.)).xyz;');
+  s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nuniform float uWaterTime; uniform float uWaterLow; varying vec3 vWater;').replace('#include <color_fragment>',`#include <color_fragment>
+   float wave=sin(vWater.x*.85+uWaterTime)*sin(vWater.z*.65-uWaterTime*.7);
+   float ripple=sin(vWater.x*3.+vWater.z*2.+uWaterTime*1.7);
+   diffuseColor.rgb=mix(vec3(.09,.29,.33),vec3(.22,.54,.55),.5+wave*.5);
+   diffuseColor.rgb+=vec3(.24,.37,.33)*pow(max(0.,wave*ripple),8.)*.4;
+  `).replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+   if(uWaterLow<.5){normal=normalize(normal+vec3(sin(vWater.x*2.+uWaterTime)*.09,0.,cos(vWater.z*2.-uWaterTime)*.09));}
+  `);
+ };
  const water=new T.Mesh(new T.PlaneGeometry(WORLD_SIZE,WORLD_SIZE),waterMaterial);water.rotation.x=-Math.PI/2;water.position.y=-.48;w.water=water;w.scene.add(water);
  // Fine jets cascade between the actual fountain bowls.
  const jetGeometry=new T.BufferGeometry(),jetPositions=new Float32Array(360*3);jetGeometry.setAttribute('position',new T.BufferAttribute(jetPositions,3));const jets=new T.Points(jetGeometry,new T.PointsMaterial({color:'#c3f2f4',size:.055,transparent:true,opacity:.78,depthWrite:false}));jets.frustumCulled=false;w.scene.add(jets);
- w.fountain={update(t){jets.visible=Math.hypot(w.lastPlayerX+24,w.lastPlayerZ-28)<90;for(let i=0;i<360;i++){const stream=Math.floor(i/60),u=((i%60)/60+t*.65)%1,a=stream*Math.PI/3,r=.2+u*1.9;jetPositions[i*3]=-24+Math.cos(a)*r;jetPositions[i*3+1]=2.65+Math.sin(u*Math.PI)*.8-u*1.9;jetPositions[i*3+2]=28+Math.sin(a)*r;}jetGeometry.attributes.position.needsUpdate=true;}};
+ w.fountain={update(t){jets.visible=Math.hypot(w.lastPlayerX+24,w.lastPlayerZ-28)<90;if(!jets.visible)return;const count=w.lowQuality?120:360;jetGeometry.setDrawRange(0,count);for(let i=0;i<count;i++){const samples=count/6,stream=Math.floor(i/samples),u=((i%samples)/samples+t*.65)%1,a=stream*Math.PI/3,r=.2+u*1.9;jetPositions[i*3]=-24+Math.cos(a)*r;jetPositions[i*3+1]=2.65+Math.sin(u*Math.PI)*.8-u*1.9;jetPositions[i*3+2]=28+Math.sin(a)*r;}jetGeometry.attributes.position.needsUpdate=true;}};
  // Architectural bridge: thin concrete deck, steel posts and continuous handrail.
  const bridgeGroup=new T.Group();w.scene.add(bridgeGroup);const steel=new T.MeshStandardMaterial({color:'#334c53',metalness:.65,roughness:.4}),concrete=new T.MeshStandardMaterial({color:'#c9c6b8',roughness:.88});
  function bar(x,y,z,sx,sy,sz,mat){const m=new T.Mesh(new T.BoxGeometry(sx,sy,sz),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;bridgeGroup.add(m);return m;}
@@ -37,6 +48,6 @@ export function populateModernPeople(w){
  people.forEach(([name,role,x,z],i)=>{if(w.collides(x,z,.4)){for(let k=1;k<12;k++)if(!w.collides(x+k*.5,z,.4)){x+=k*.5;break;}}const mesh=modernCharacter(i%8+1);mesh.position.set(x,height(x,z),z);w.scene.add(mesh);const route=[{x,z},{x,z:z+5},{x:x+3,z:z+5},{x,z}].filter(p=>!w.collides(p.x,p.z,.4));w.npcs.push({name,role,x,z,homeX:x,homeZ:z,mesh,phase:i,route});});
 }
 export function populateModernWild(w){
- for(let i=0;i<22;i++){const e=chooseEncounter(w.rand,w.collides.bind(w),w.wild,null,PLAN.spawn);if(!e)continue;const mesh=modelCreature(species(e.id),1);mesh.position.set(e.x,height(e.x,e.z),e.z);w.scene.add(mesh);w.wild.push({...e,mesh,index:i,cooldown:0});}
+ for(let i=0;i<34;i++){const e=chooseEncounter(w.rand,w.collides.bind(w),w.wild,null,PLAN.spawn);if(!e)continue;const mesh=modelCreature(species(e.id),1);mesh.position.set(e.x,height(e.x,e.z),e.z);w.scene.add(mesh);w.wild.push({...e,mesh,index:i,cooldown:0});}
  const {x,z}=PLAN.arena,mesh=modelCreature(species('gardien'),1);mesh.position.set(x,height(x,z),z);w.scene.add(mesh);w.wild.push({id:'gardien',x,z,homeX:x,homeZ:z,mesh,phase:0,cooldown:0,index:22,level:7});
 }

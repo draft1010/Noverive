@@ -1,4 +1,4 @@
-import {T} from './art.js';
+import {T,windUniform} from './art.js';
 const vertices=[],colors=[];
 for(let i=0;i<7;i++){
  const a=i*2.399,x=Math.cos(a)*.13,z=Math.sin(a)*.13,h=.16+(i%3)*.055,w=.025;
@@ -8,6 +8,7 @@ for(let i=0;i<7;i++){
 }
 const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setAttribute('color',new T.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();
 const material=new T.MeshStandardMaterial({vertexColors:true,roughness:1,side:T.DoubleSide});material.userData.cutawayExcluded=true;
+material.onBeforeCompile=s=>{s.uniforms.uMeadowTime=windUniform;s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nuniform float uMeadowTime;').replace('#include <begin_vertex>','#include <begin_vertex>\nvec3 worldBlade=(modelMatrix*instanceMatrix*vec4(position,1.)).xyz; transformed.x+=sin(uMeadowTime*1.4+worldBlade.x*.65+worldBlade.z*.4)*position.y*.22;');};
 export function meadowTufts(placements,parent){
  const mesh=new T.InstancedMesh(geometry,material,placements.length),o=new T.Object3D();
  placements.forEach((p,i)=>{o.position.set(p.x,p.y+.015,p.z);o.rotation.y=p.r||0;o.scale.setScalar((p.s||.15)*6);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});

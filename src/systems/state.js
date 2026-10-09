@@ -50,7 +50,7 @@ export function newState(starter = "velune", name = "Élo", color = "#657d95") {
     friendship: {},
     discovered: ["city"],
     quest: 0,
-    settings: { quality: typeof matchMedia!=="undefined"&&matchMedia("(pointer:coarse)").matches?"low":"medium", pixel: false, sound: true, touch: false },
+    settings: { graphicsVersion: 1, quality: "low", pixel: false, sound: true, touch: false },
     playtime: 0,
   };
 }
@@ -85,7 +85,7 @@ export function normalizeSave(raw) {
     inventory,
     inventorySlots,
     buildings,
-    settings: { ...base.settings, ...raw.settings, quality:['low','medium','high','ultra'].includes(raw.settings?.quality)?raw.settings.quality:base.settings.quality },
+    settings: { ...base.settings, ...raw.settings, graphicsVersion:1, quality:raw.settings?.graphicsVersion===1 && ['low','medium','high','ultra'].includes(raw.settings?.quality)?raw.settings.quality:'low' },
     team: raw.team.map((c) => ({ ...makeCreature(c.id, c.level), ...c })),
     flags: { ...raw.flags },
     discovered: raw.discovered || ["city"],

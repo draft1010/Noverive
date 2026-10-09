@@ -1,3 +1,4 @@
+import {clone as cloneSkeleton} from '../../vendor/addons/utils/SkeletonUtils.js';
 import { T, creature as proceduralCreature } from "./art.js";
 import { GLTFLoader } from "../../vendor/addons/loaders/GLTFLoader.js";
 
@@ -11,9 +12,23 @@ import { GLTFLoader } from "../../vendor/addons/loaders/GLTFLoader.js";
  */
 
 const loader = new GLTFLoader();
-T.Cache.enabled = true;
+const templates=new Map();
+function monsterTemplate(url){
+ if(!templates.has(url))templates.set(url,loader.loadAsync(url).then(gltf=>{
+  gltf.scene.traverse(o=>{if(o.geometry)o.geometry.userData.sharedAsset=true;for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){m.userData.sharedAsset=true;for(const v of Object.values(m))if(v?.isTexture)v.userData.sharedAsset=true;}});return gltf;
+ }).catch(error=>{templates.delete(url);throw error;}));
+ return templates.get(url);
+}
 
-const MODEL_CONFIG = {
+export const MODEL_CONFIG = {
+dinosylve:{url:'./assets/monsters/dinosylve/model.gltf',height:1.8,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+cactine:{url:'./assets/monsters/cactine/model.gltf',height:1.55,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+astrel:{url:'./assets/monsters/astrel/model.gltf',height:1.55,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+sorbel:{url:'./assets/monsters/sorbel/model.gltf',height:1.55,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+noctile:{url:'./assets/monsters/noctile/model.gltf',height:1.55,hover:0.25,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+calamaree:{url:'./assets/monsters/calamaree/model.gltf',height:1.55,hover:0.25,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+rocogre:{url:'./assets/monsters/rocogre/model.gltf',height:2,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
+fulgurin:{url:'./assets/monsters/fulgurin/model.gltf',height:1.55,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Punch','Headbutt','Bite_Front','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
 melipom: {url:'./assets/monsters/melipom.gltf',height:1.4,hover:0.2,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Bite_Front','Punch','Headbutt','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
 dracendre: {url:'./assets/monsters/dracendre.gltf',height:1.4,hover:0.2,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Bite_Front','Punch','Headbutt','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
 rainette: {url:'./assets/monsters/rainette.gltf',height:1.7,hover:0,idle:['Idle','Flying_Idle'],move:['Walk','Fast_Flying','Run'],attack:['Bite_Front','Punch','Headbutt','Jump'],hit:['HitReact','HitRecieve'],death:['Death']},
@@ -112,7 +127,7 @@ export async function preloadMonsterModels(onProgress = () => {}) {
   const results = await Promise.allSettled(
     entries.map(async (cfg) => {
       try {
-        return await loader.loadAsync(cfg.url);
+        return await monsterTemplate(cfg.url);
       } finally {
         done += 1;
         onProgress(done, entries.length, cfg.url.split("/").pop());
@@ -147,7 +162,7 @@ function setMeshQuality(root, glow = false) {
       if (material.map) {
         material.map.colorSpace = T.SRGBColorSpace;
         material.map.anisotropy = 4;
-        material.map.needsUpdate = true;
+
       }
       if ("roughness" in material) material.roughness = Math.max(0.72, material.roughness ?? 0.85);
       if ("metalness" in material) material.metalness = 0;
@@ -278,9 +293,8 @@ export function modelCreature(s, scale = 1) {
 
   if (!cfg) return group;
 
-  loader.load(
-    cfg.url,
-    (gltf) => {
+  monsterTemplate(cfg.url).then((template) => {
+      const gltf={scene:cloneSkeleton(template.scene),animations:template.animations};
       if(disposed){disposeModel(gltf.scene);return;}
       try {
         const model = gltf.scene;
@@ -316,12 +330,9 @@ export function modelCreature(s, scale = 1) {
       } catch (error) {
         console.warn(`[Ambrelune] Modèle ${s.id} invalide, fallback conservé.`, error);
       }
-    },
-    undefined,
-    (error) => {
+    }).catch((error) => {
       console.warn(`[Ambrelune] Impossible de charger ${cfg.url}, fallback conservé.`, error);
-    },
-  );
+    });
 
   return group;
 }

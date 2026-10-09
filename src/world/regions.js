@@ -3,13 +3,13 @@ export const WORLD_LIMIT=WORLD_SIZE/2,CHUNK_SIZE=32;
 export const REGIONS=[
  {id:'downtown',name:'Les Horizons • Métropole',x:-240,z:-168,color:'#a6a8a2',species:['velune','lumignon','melipom'],resources:['scrap'],level:2},
  {id:'suburb',name:'Jardins de la Rive',x:-180,z:120,color:'#8eaa72',species:['velune','aurelievre','melipom'],resources:['fiber'],level:2},
- {id:'farm',name:'Les Vergers',x:-96,z:190,color:'#92a863',species:['moussier','melipom','aurelievre'],resources:['fiber','wood'],level:3},
- {id:'forest',name:'Forêt des Murmures',x:180,z:80,color:'#557e50',species:['moussier','germousse','vrille','velune'],resources:['wood','fiber'],level:4},
- {id:'lake',name:'Lac des Reflets',x:410,z:280,color:'#96ad7c',species:['ondril','rainette','coralys'],resources:['fiber'],level:4},
- {id:'quarry',name:'Carrière des Roches Claires',x:260,z:-200,color:'#a99881',species:['galetis','brasile','dracendre'],resources:['stone','ore','coal'],level:5},
- {id:'mountain',name:'Massif du Levant',x:650,z:-550,color:'#929b8b',species:['nivours','alizelle','galetis'],resources:['stone','ore'],level:7},
- {id:'cave',name:'Grotte de Résonance',x:465,z:-350,color:'#918888',species:['lumignon','dracendre','galetis'],resources:['crystal','coal','ore'],level:8},
- {id:'wild',name:'Réserve des Lointains',x:650,z:650,color:'#66804e',species:['germousse','dracendre','alizelle','coralys'],resources:['wood','crystal'],level:9},
+ {id:'farm',name:'Les Vergers',x:-96,z:190,color:'#92a863',species:['cactine','moussier','melipom','aurelievre'],resources:['fiber','wood'],level:3},
+ {id:'forest',name:'Forêt des Murmures',x:180,z:80,color:'#557e50',species:['dinosylve','moussier','germousse','vrille','velune'],resources:['wood','fiber'],level:4},
+ {id:'lake',name:'Lac des Reflets',x:410,z:280,color:'#96ad7c',species:['calamaree','ondril','rainette','coralys'],resources:['fiber'],level:4},
+ {id:'quarry',name:'Carrière des Roches Claires',x:260,z:-200,color:'#a99881',species:['sorbel','rocogre','galetis','brasile','dracendre'],resources:['stone','ore','coal'],level:5},
+ {id:'mountain',name:'Massif du Levant',x:650,z:-550,color:'#929b8b',species:['astrel','nivours','alizelle','galetis'],resources:['stone','ore'],level:7},
+ {id:'cave',name:'Grotte de Résonance',x:465,z:-350,color:'#918888',species:['noctile','lumignon','dracendre','galetis'],resources:['crystal','coal','ore'],level:8},
+ {id:'wild',name:'Réserve des Lointains',x:650,z:650,color:'#66804e',species:['fulgurin','dinosylve','germousse','dracendre','alizelle','coralys'],resources:['wood','crystal'],level:9},
 ];
 export function biomeAt(x,z){let id=inCity(x,z)?'downtown':x<5?(z<155?'suburb':'farm'):'forest';if(x>170&&z<-100)id='quarry';if(x>380&&z<-390)id='mountain';if(Math.hypot(x-PLAN.cave.x,z-PLAN.cave.z)<62)id='cave';if(Math.hypot((x-410)/1.25,z-280)<125)id='lake';if(x>430&&z>470)id='wild';return REGIONS.find(r=>r.id===id);}
 export const CITY_X=Array.from({length:17},(_,i)=>-768+i*48),CITY_Z=Array.from({length:15},(_,i)=>-576+i*48);

@@ -4580,3 +4580,5 @@ button.primary,.primary{background:#197c79;color:white;border-color:transparent;
  #modal .paper.inventory-paper .equipment-strip button{min-height:32px!important;padding:5px 12px!important;font-size:12px!important}
  #modal .paper.inventory-paper .journal-content{padding:8px 12px!important}
 }
+/* Eco keeps overlays inexpensive while the 3D scene is moving underneath. */
+body[data-graphics="low"] #hud *,body[data-graphics="low"] #modal *,body[data-graphics="low"] #battle *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}

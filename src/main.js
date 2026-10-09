@@ -1,3 +1,6 @@
+import {Presentation} from './rendering/presentation.js';
+import {GRAPHICS,graphicsProfile,renderRatio,AdaptiveResolution,FramePacer} from './rendering/graphics.js';
+import {atmosphere,contactShadows} from './rendering/atmosphere.js';
 import {staticCollision} from './world/layout.js';
 import {equipment} from './rendering/equipment.js';
 import {PLAN,WORLD_SIZE} from './world/plan.js';
@@ -17,7 +20,7 @@ import {
   storageView,
 } from "./rendering/journal-ui.js";
 import { BattleStage } from "./rendering/battle-stage.js";
-import { characterActionForTool } from "./rendering/character-assets.js?v=22";
+import { characterActionForTool } from "./rendering/equipment.js";
 import { modernCharacter, preloadModernCharacters as preloadCharacterAssets } from './rendering/modern-character.js';
 import { modelCreature, preloadMonsterModels } from "./rendering/monster-models.js?v=22";
 import {
@@ -92,22 +95,24 @@ scene.background = new T.Color("#c8d8ce");
 scene.fog = new T.Fog("#c8d8ce", 65, 135);
 const renderer = new T.WebGLRenderer({
   canvas,
-  antialias: true,
+  antialias: false,
   powerPreference: "high-performance",
 });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
+renderer.setPixelRatio(renderRatio("low",innerWidth,innerHeight,devicePixelRatio));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 renderer.outputColorSpace = T.SRGBColorSpace;
 renderer.toneMapping = T.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.02;
+const presentation=new Presentation(renderer);
+renderer.info.autoReset=false;
 const camera = new T.PerspectiveCamera(38, innerWidth / innerHeight, 0.2, 220);
 const ambient = new T.HemisphereLight("#dfe9d0", "#758668", 2.1);
 scene.add(ambient);
 const sun = new T.DirectionalLight("#fff0c9", 3.2);
 sun.position.set(-25, 48, 30);
-sun.castShadow = true;
+sun.castShadow = false;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, {
   left: -36,
@@ -121,6 +126,8 @@ sun.shadow.bias = -0.00025;
 sun.shadow.normalBias = 0.04;
 sun.shadow.radius = 3;
 scene.add(sun, sun.target);
+const skyAtmosphere=atmosphere(scene), contacts=contactShadows(scene), adaptive=new AdaptiveResolution(),pacer=new FramePacer();
+let graphics=graphicsProfile("low"),  shadowElapsed=0;
 const world = new World(scene),
   audio = new AudioGarden();
 let state = newState(),
@@ -146,7 +153,6 @@ let state = newState(),
   frameElapsed = 0,
   fps = 0,
   frameMs = 0,
-  lowRenderScale = 0.85,
   stepElapsed = 0,
   farmHelperElapsed = 0,
   lastDailyHour = 8;
@@ -499,8 +505,11 @@ function setupActors() {
 }
 async function requestGameFullscreen() {
   try {
-    if(!document.fullscreenElement && document.documentElement.requestFullscreen)
-      await document.documentElement.requestFullscreen({navigationUI:'hide'});
+    if(!document.fullscreenElement && !document.webkitFullscreenElement){
+      const root=document.documentElement;
+      if(root.requestFullscreen)await root.requestFullscreen({navigationUI:'hide'});
+      else if(root.webkitRequestFullscreen)await root.webkitRequestFullscreen();
+    }
   } catch {}
   // Installed applications and supported fullscreen browsers can lock directly.
   try { await screen.orientation?.lock?.('landscape'); } catch {}
@@ -566,7 +575,7 @@ function introChoice() {
       }),
   );
 }
-$("newBtn").onclick = introChoice;
+$("newBtn").onclick = () => {requestGameFullscreen();introChoice();};
 $("continueBtn").onclick = () => {
   const s = load();
   if (s) begin(s);
@@ -1046,7 +1055,7 @@ function openMenu(tab = modalTab) {
     }).join("")}</div>`;
   }
   if (tab === "settings")
-    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Adapte ombres et finesse du rendu.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${["Basse · optimisée", "Moyenne", "Haute", "Ultra"][i]}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.5 · Interface Noverive · Sauvegarde locale versionnée</small>`;
+    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Éco par défaut. Distance, ombres, végétation et effets adaptés.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${GRAPHICS[q].label}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.7 · Noverive · Sauvegarde locale versionnée</small>`;
   const current = tabs.find((t) => t[0] === tab) || tabs[0];
   showModal(
     `<div class="journal-shell"><aside class="journal-sidebar"><div class="journal-brand"><span class="journal-sigil">❧</span><div><b>NOVERIVE</b><small>CARNET DE ${esc(state.name).toUpperCase()}</small></div></div><nav class="journal-nav">${tabs.map(([id, label]) => `<button data-tab="${id}" aria-label="${label}" title="${label}" class="${id === tab ? "selected" : ""}">${tabIcon(id)}<span>${label}</span><i></i></button>`).join("")}</nav><div class="journal-sidebar-foot"><div><small>JOUR</small><b>${state.day}</b></div><div><small>AMBRE</small><b>◈ ${state.coins}</b></div></div></aside><section class="journal-page"><header class="journal-page-header"><div><span class="eyebrow">${current[2].toUpperCase()}</span><h2>${current[1]}</h2></div><div class="journal-day"><small>${state.weather.toUpperCase()}</small><b>${$("clock").textContent || "08:00"}</b><span>${$("calendar").textContent || `Jour ${state.day}`}</span></div></header><div class="journal-content">${html}</div></section></div>`,
@@ -1231,12 +1240,7 @@ function openMenu(tab = modalTab) {
         toast("Cette copie est invalide ou d’une version incompatible.");
       }
     };
-    $("fullscreen").onclick = () =>
-      document.documentElement
-        .requestFullscreen?.()
-        .catch(() =>
-          toast("Le plein écran est indisponible dans ce navigateur."),
-        );
+    $("fullscreen").onclick = requestGameFullscreen;
     $("photo").onclick = () => {
       closeModal();
       $("hud").hidden = true;
@@ -1277,33 +1281,21 @@ function attachTravel() {
 }
 function applySettings() {
   const q = state.settings.quality;
-  // Medium/High/Ultra deliberately keep their existing rendering unchanged.
-  // Low is the dedicated performance mode for weaker phones.
-  if (q !== "low") lowRenderScale = 0.85;
-  const ratio = q === "low"
-    ? lowRenderScale
-    : ({ medium: 1.2, high: 1.7, ultra: 2.5 }[q] || 1.2);
-
-  state.settings.pixel = false;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, ratio));
-  renderer.domElement.style.imageRendering = "auto";
-
-  const low = q === "low";
-  renderer.shadowMap.enabled = !low;
-  sun.castShadow = !low;
-  const res = q === "ultra" ? 4096 : q === "high" ? 2048 : 1024;
-  if (sun.shadow.mapSize.x !== res) {
-    sun.shadow.mapSize.set(res, res);
-    if (sun.shadow.map) {
-      sun.shadow.map.dispose();
-      sun.shadow.map = null;
-    }
-  }
-
-  // Slightly shorter view distance only in Low; fog masks the chunk culling softly.
-  scene.fog.near = low ? 66 : 95;
-  scene.fog.far = low ? 130 : 190;
+  graphics=graphicsProfile(q);
+  renderer.setPixelRatio(renderRatio(q,innerWidth,innerHeight,devicePixelRatio,q==='low'?adaptive.scale:1));
+  renderer.domElement.style.imageRendering='auto';
+  renderer.shadowMap.enabled=graphics.shadow>0;
+  renderer.shadowMap.autoUpdate=false;
+  renderer.shadowMap.needsUpdate=true;
+  sun.castShadow=graphics.shadow>0;
+  const res=graphics.shadow||512;
+  if(sun.shadow.mapSize.x!==res){sun.shadow.mapSize.set(res,res);sun.shadow.map?.dispose();sun.shadow.map=null;}
+  scene.fog.near=graphics.radius*.62;scene.fog.far=graphics.radius+24;
+  camera.far=Math.max(210,graphics.radius+60);camera.updateProjectionMatrix();
   world.setQuality?.(q);
+  presentation.configure(q);
+  document.body.dataset.graphics=q;
+  if(battle){battle.stage.quality=q;battle.stage.sun.castShadow=graphics.shadow>0;}
 
   audio.enabled = state.settings.sound;
   document.body.classList.toggle(
@@ -1408,7 +1400,8 @@ function startBattle(w) {
     wasVisible: w.mesh.visible,
   };
   battle.stage = new BattleStage(battle.ally, battle.enemy);
-  battle.stage.sun.castShadow=state.settings.quality!=="low";
+  battle.stage.quality=state.settings.quality;
+  battle.stage.sun.castShadow=graphics.shadow>0;
   cameraTarget.set(0, 0.7, 0.5);
   camera.position.set(5, 20, 20);
   battle.ally.energy = 30;
@@ -1486,12 +1479,12 @@ async function applyMove(attacker, defender, id, isAlly) {
     battle.attack = 0.5;
     battle.side = isAlly ? 1 : -1;
     battle.stage.impact(isAlly, species(attacker.id).accent, id, {miss:hit.miss,ko:nextHp===0});
-    await delay(480);if(battle!==currentBattle)return;
+    await delay(920);if(battle!==currentBattle)return;
     defender.hp=nextHp;
     audio.play("hit");
   }
   updateBattle(text);
-  await delay(move.power ? 350 : 700);
+  await delay(move.power ? 920 : 1850);
 }
 async function battleTurn(action) {
   if (!battle || battle.phase !== "choose") return;
@@ -1966,9 +1959,12 @@ updateOrientationGate();
 const clock = new T.Clock();
 function loop() {
   requestAnimationFrame(loop);
-  const raw = clock.getDelta(),
-    dt = Math.min(raw, 0.05);
-  if(contextLost || document.hidden || portraitBlocked)return;
+  const delta=clock.getDelta();
+  if(contextLost || document.hidden || portraitBlocked){pacer.reset();return;}
+  const mobile=matchMedia('(pointer:coarse)').matches || state.settings.touch;
+  const targetFps=state.settings.quality==='low'&&mobile?30:60;
+  const raw=pacer.tick(delta,targetFps);if(!raw)return;
+  const dt=Math.min(raw,.05);
   time += dt;
   windUniform.value = time;
   frames++;
@@ -1979,17 +1975,11 @@ function loop() {
     frames = 0;
     frameElapsed = 0;
 
-    // Low mode only: adapt internal resolution gently to the phone's real FPS.
-    // This never changes Medium or the higher quality modes.
-    if (started && state.settings.quality === "low") {
-      const previous = lowRenderScale;
-      if (fps < 24) lowRenderScale = Math.max(0.65, lowRenderScale - 0.08);
-      else if (fps < 31) lowRenderScale = Math.max(0.65, lowRenderScale - 0.04);
-      else if (fps > 48) lowRenderScale = Math.min(0.85, lowRenderScale + 0.04);
-      if (Math.abs(previous - lowRenderScale) >= 0.025)
-        renderer.setPixelRatio(Math.min(devicePixelRatio, lowRenderScale));
+    if(started && state.settings.quality==='low'){
+      const previous=adaptive.scale;
+      adaptive.sample(fps,targetFps);
+      if(previous!==adaptive.scale)renderer.setPixelRatio(renderRatio('low',innerWidth,innerHeight,devicePixelRatio,adaptive.scale));
     }
-
     const inf = renderer.info.render;
     $("debug").textContent =
       `${fps.toFixed(1)} FPS · ${frameMs.toFixed(1)} ms\n${inf.calls} appels · ${inf.triangles.toLocaleString()} triangles\n${world.chunks.filter((c) => c.g.visible).length}/${world.chunks.length} chunks visibles\n${innerWidth} × ${innerHeight} · DPR ${renderer.getPixelRatio().toFixed(2)}\nPosition ${state.player.x.toFixed(1)}, ${state.player.z.toFixed(1)}\n${renderer.info.memory.geometries} géométries · ${renderer.info.memory.textures} textures\nPNJ ${world.npcs
@@ -2040,7 +2030,14 @@ function loop() {
     foliageFocus.value.copy(player.position).add(new T.Vector3(0, 1, 0));
   foliageCamera.value.copy(camera.position);
   if(player)updateCutawayScreen(camera,renderer,foliageFocus.value);
-  renderer.render(battle ? battle.stage.scene : currentScene(), camera);
+  if(!battle&&!interior){
+    skyAtmosphere.update(camera,Math.max(.08,Math.sin(((state.time-6)/15)*Math.PI)),state.weather==='pluie'?1:0);
+    contacts.update([player,companion,...world.npcs.map(n=>n.mesh),...world.wild.map(w=>w.mesh)],height);
+  }
+  shadowElapsed+=dt;
+  if(graphics.shadow && shadowElapsed>=(state.settings.quality==='medium'?1/15:1/30)){renderer.shadowMap.needsUpdate=true;shadowElapsed=0;}
+  renderer.info.reset();
+  presentation.render(battle ? battle.stage.scene : currentScene(), camera);
 }
 window.addEventListener("resize", () => {
   camera.aspect = Math.max(1,innerWidth) / Math.max(1,innerHeight);
@@ -2165,23 +2162,3 @@ if ("serviceWorker" in navigator)
 
 // Development harness imports; no automatic test execution.
 export { state, world, player, camera, renderer, input, begin, enterHome, leaveHome, openMenu, closeModal, startBuild, placeBuilding, cancelBuild, furnishingMenu, movePlayer, updateCamera, syncWorld, selectTool, fishing, startBattle, endBattle, interior, battle, applyMove };
-// Test controls are restricted to the isolated QA origin and explicit query flag.
-if(location.port==='4186' && new URLSearchParams(location.search).has('qa')){
- const panel=document.createElement('details');panel.id='qaPanel';panel.open=true;panel.style.cssText='position:fixed;left:8px;bottom:8px;z-index:9999;background:#142e32ed;color:white;padding:8px;max-width:96vw;font:12px monospace';panel.innerHTML='<summary>Vérifications de la refonte</summary><div id="qaActions"></div><pre id="qaReadout" style="max-height:140px;overflow:auto"></pre>';document.body.append(panel);
- const actions=panel.querySelector('#qaActions');
- function qaButton(label,fn){const b=document.createElement('button');b.textContent=label;b.style.cssText='font:12px sans-serif;padding:5px;margin:2px';b.onclick=fn;actions.append(b);}
- function warp(x,z){if(!started){const q=newState();q.settings.sound=false;begin(q);}if(interior)leaveHome();if(battle)endBattle('Fin du test');closeModal();if(world.collides(x,z,.45)){outer:for(let r=.5;r<12;r+=.5)for(let i=0;i<24;i++){const xx=x+Math.cos(i*Math.PI/12)*r,zz=z+Math.sin(i*Math.PI/12)*r;if(!world.collides(xx,zz,.45)){x=xx;z=zz;break outer;}}}state.player={x,z};input.target=null;input.keys.clear();cameraTarget.set(x,height(x,z)+1,z);movePlayer(0);}
- for(const [label,x,z] of [['Place',-24,36],['Centre',-240,-168],['Ferme',-96,180],['Forêt',180,80],['Lac',292,280],['Carrière',260,-200],['Grotte',465,-350],['Crêtes',650,-550],['Réserve',650,650]])qaButton(label,()=>warp(x,z));
- let qaRunning=false;
- qaButton('Parcours complet',async()=>{if(qaRunning)return;qaRunning=true;const results=[];let out=document.getElementById('qaResults');if(!out){out=document.createElement('pre');out.id='qaResults';out.style.cssText='max-height:160px;overflow:auto;max-width:600px;white-space:pre-wrap';panel.append(out);}try{
- for(let pass=0;pass<2;pass++)for(const [name,x,z] of [['centre',-240,-168],['ferme',-96,180],['foret',180,80],['lac',292,280],['carriere',260,-200],['grotte',465,-350],['cretes',650,-550],['reserve',650,650]]){
-  warp(x,z);out.textContent='Parcours '+(pass+1)+' : '+name;const until=performance.now()+20000;let stable=0;
-  while(performance.now()<until){await new Promise(r=>setTimeout(r,250));if(world.streamer.pending===0&&world.streamer.stats().missing===0){stable++;if(stable>=4)break;}else stable=0;}
-  const d=window.noveriveDiagnostics();results.push({pass,name,fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,...d.memory,active:d.streaming.active,cached:d.streaming.cached,errors:d.errors.length+d.streaming.errors.length+d.streaming.failures.length,settled:stable>=4});
- }
- out.textContent=JSON.stringify(results,null,1);panel.dataset.qaReport=JSON.stringify(results);
- }catch(e){out.textContent=e.stack;}finally{qaRunning=false;}});
- qaButton('Qualité basse',()=>{state.settings.quality='low';applySettings();});qaButton('Qualité haute',()=>{state.settings.quality='high';applySettings();});qaButton('Masquer',()=>{panel.hidden=true;});window.addEventListener('keydown',e=>{if(e.key==='F9')panel.hidden=!panel.hidden;});qaButton('Panorama',()=>{input.zoom=19;input.angle=0;});qaButton('Cultures',()=>{warp(-96,190);state.plots.forEach((p,i)=>{p.seed=['seed','wheatSeed','carrotSeed','flaxSeed','pumpkinSeed'][i%5];p.stage=4;p.water=1;});world.sync(state);});qaButton('Expéditions',()=>openExpeditions());qaButton('Vue large',()=>{input.zoom=42;});qaButton('TPS',()=>{input.zoom=12;});
- qaButton('Sol sec et arrosé',()=>{warp(-108,194);input.zoom=26;input.angle=0;state.plots.forEach((p,i)=>{p.stage=0;p.water=0;if(i%2===0)farmAction(state,p,'water');});syncWorld();});qaButton('Domaine entier',()=>{warp(-118,183);input.zoom=65;input.angle=0;});qaButton('Maison',()=>{warp(PLAN.door.x,PLAN.door.z);enterHome('home');});qaButton('Café',()=>{warp(-34,24);enterHome('house--40-24');});qaButton('Sac',()=>openMenu('bag'));qaButton('Fabriquer',()=>openMenu('craft'));qaButton('Carte',()=>openMenu('map'));qaButton('Combat',()=>{const w=world.wild.find(w=>w.id!=='gardien');if(w)startBattle(w);});
- setInterval(()=>{const d=window.ambreluneDiagnostics();panel.querySelector('#qaReadout').textContent=JSON.stringify({fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,position:d.state.player,grip:player?.userData.arms[1]?.getWorldPosition(new T.Vector3()).toArray(),tool:heldTool?{parent:heldTool.parent?.name,scale:heldTool.getWorldScale(new T.Vector3()).toArray(),bounds:new T.Box3().setFromObject(heldTool).getSize(new T.Vector3()).toArray()}:null,memory:d.memory,streaming:d.streaming,errors:d.errors},null,1);},1000);
-}
