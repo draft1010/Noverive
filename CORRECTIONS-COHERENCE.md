@@ -13,3 +13,9 @@ Vérification : 39 tests réussis. Audit des 4 096 secteurs du monde ; contrôle
 Le dossier d'assets contient Farm Pack Godot.zip et Farm Pack.zip. Aucun téléchargement complémentaire n'a été nécessaire pour ces corrections.
 
 La version du cache a été actualisée. Recharger le jeu pour appliquer les corrections à une session déjà ouverte.
+
+## Herbe et arrosage
+
+Herbe enrichie par des variations de couleur et des touffes de brins en volume ; espaces de travail et voies conservés libres. Le couvert d'herbe utilise des instances légères.
+La terre des parcelles fonce immédiatement à l'arrosage puis s'éclaircit avec le séchage. Le contour vert et les plantes restent inchangés. L'humidité peut être appliquée aux parcelles vides et reste conservée à la sauvegarde et à la plantation. La pluie humidifie aussi les parcelles vides et mûres.
+41 tests réussis ; comparaison visuelle de parcelles sèches et humides dans le même éclairage, sans erreur de rendu dans le navigateur.

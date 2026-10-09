@@ -278,7 +278,7 @@ export class World {
       if (r.collider) r.collider.disabled = !visible;
     }
     for(const p of state.plots){
-      const key=`${p.seed}-${p.stage}-${p.water>.1}`;const old=this.plotMeshes.get(p.id);if(old?.key===key)continue;
+      const key=`${p.seed}-${p.stage}`;const old=this.plotMeshes.get(p.id);if(old?.key===key){old.g.userData.setMoisture(p.water);continue;}
       if(old){old.g.userData.dispose?.();old.g.removeFromParent();}
       const g=cropVisual(p);g.position.set(p.x,height(p.x,p.z)+.02,p.z);this.scene.add(g);this.plotMeshes.set(p.id,{key,g});
     }

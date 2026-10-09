@@ -21,7 +21,9 @@ export function landscapeMaterial(){
    else if(country)surface=3.;else if(trail)surface=2.;else surface=length(vec2((p.x-410.)/1.25,p.y-280.))<96.?4.:0.;
    if(surface<.5){
     float blades=smoothstep(.50,.82,noise2(p*vec2(40.0,7.0)));
-    diffuseColor.rgb*=.83+broad*.22+small*.09+blades*.055;
+    float meadow=noise2(p*.42)*.6+noise2(p*.085)*.4;
+    diffuseColor.rgb*=.64+broad*.36+small*.18+blades*.14;
+    diffuseColor.rgb=mix(diffuseColor.rgb*vec3(.76,.92,.66),diffuseColor.rgb*vec3(1.18,1.12,.77),smoothstep(.25,.75,meadow));
     diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.14,1.04,.78),smoothstep(.55,.8,noise2(p*.31))*.3);
    }else if(surface<1.5){
     vec2 q=p*1.25;
@@ -36,6 +38,6 @@ export function landscapeMaterial(){
    else{diffuseColor.rgb=vec3(.53,.47,.32)*(.85+broad*.18+fine*.12);}
   `);
  };
- material.customProgramCacheKey=()=> 'noverive-landscape-v3';
+ material.customProgramCacheKey=()=> 'noverive-landscape-v4';
  return material;
 }

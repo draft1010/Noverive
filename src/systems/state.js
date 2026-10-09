@@ -92,7 +92,7 @@ export function normalizeSave(raw) {
     plots: Array.isArray(raw.plots)
       ? raw.plots.map((p) => {
           const plot = { ...p };
-          if ((plot.stage || 0) === 0) plot.water = 0;
+          plot.water = Math.max(0,Math.min(1,Number(plot.water)||0));
           return plot;
         })
       : [],
@@ -192,12 +192,12 @@ export function advanceQuest(s) {
 }
 export function tickFarm(s, dt) {
   for (const p of s.plots) {
-    if (p.stage < 1 || p.stage >= 4) continue;
+
     if (s.weather === "pluie") p.water = 1;
     if (p.water > 0) {
-      p.growth = (p.growth || 0) + dt * (p.fertilized ? 1.5 : 1);
+      if(p.stage>=1 && p.stage<4)p.growth = (p.growth || 0) + dt * (p.fertilized ? 1.5 : 1);
       p.water = Math.max(0, p.water - dt / 180);
-      p.stage = Math.min(4, 1 + Math.floor(p.growth / ((CROPS[p.seed || "seed"]?.seconds || 84) / 3)));
+      if(p.stage>=1 && p.stage<4)p.stage = Math.min(4, 1 + Math.floor(p.growth / ((CROPS[p.seed || "seed"]?.seconds || 84) / 3)));
     }
   }
 }
@@ -210,9 +210,8 @@ export function farmAction(s, p, tool) {
       p.seed = seed;
       p.stage = 1;
       p.growth = 0;
-      // Planting always starts on dry soil. Do not inherit stale moisture
-      // from an older save or a previous crop.
-      p.water = 0;
+      // Newly planted seeds retain the actual soil moisture.
+      p.water = Math.max(0,Math.min(1,p.water||0));
       p.fertilized = false;
       s.stats.planted++;
       return `${CROPS[seed].name} planté(e). Un peu d’eau pour commencer !`;
@@ -233,7 +232,7 @@ export function farmAction(s, p, tool) {
     return "La roselle pousse quand sa terre reste humide.";
   }
   if (tool === "water") {
-    if (p.stage === 0) return "Plantez une graine avec l’outil Cultiver.";
+
     if (p.water < 0.6) s.stats.watered++;
     p.water = 1;
     return "Terre arrosée. Le jardin vous remercie.";

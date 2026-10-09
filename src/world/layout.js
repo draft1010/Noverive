@@ -77,6 +77,14 @@ export function sectorLayout(cx,cz){
  for(const x of [-119,-79]){garden(x,149,Math.PI/2);garden(x,159,Math.PI/2);}
  put('Bench_1_A',-83,163,1,Math.PI);put('SM_WateringCan_1_A',-116,179,.8,0,false);
  put('SM_FarmSign_1_A',-78,174,.45);put('SM_LetterBox_1_1_A',-78,163,1.2);
+ // Short meadow islands break up the lawn without filling paths, buildings or working beds.
+ for(let i=0;i<560;i++){
+  const x=cx*32+hash(cx*560+i,cz,701)*32,z=cz*32+hash(cx,cz*560+i,1792)*32;
+  if(!isFarm(x,z)||roadAt(x,z)||Math.abs(z-168)<3||x>-114&&x<-100&&z>182&&z<193||x>-132&&x<-124&&z>194||FIXED.some(p=>{const f=footprintFor(p);return Math.abs(x-f.x)<f.w/2+1.8&&Math.abs(z-f.z)<f.d/2+1.8;}))continue;
+  if(hash(Math.floor(x/4),Math.floor(z/4),501)<.32)continue;
+  const flower=i%17===0,id=flower?'EA_M_Env_Flower_01a_PRE':'EA_M_Env_Grass_01a_PRE';
+  const p=put(id,x,z,flower?.28:.12+hash(cx,cz,i+63)*.09,hash(cx,cz,i+15)*6.28,false,false);if(p&&!flower)p.meadow=true;
+ }
  // Rock cavern: vaulted pieces follow the new mountain contour, keeping the corridor open.
  for(const x of [465,475,485]){for(const z of [-357,-343])put('EA01_Env_Clif_01a',x,z,.65,Math.PI/2);const roof=put('EA01_Env_Clif_01b',x,-350,.8,0,false);if(roof){roof.y+=6.5;roof.sy=.12;roof.sx=.8;roof.sz=.8;}}
  const region=biomeAt(cx*32+16,cz*32+16),natural=region.id!=='downtown';
@@ -88,7 +96,7 @@ export function sectorLayout(cx,cz){
  }
  if(natural)for(let i=0;i<180;i++){
   const x=cx*32+hash(cx,cz,i*13+401)*32,z=cz*32+hash(cx,cz,i*13+402)*32;if(reserve(x,z)||height(x,z)<0||inCity(x,z))continue;
-  const id=i%9===0?'EA_M_Env_Flower_01a_PRE':i%13===0?'EA_M_Env_Flower_01b_PRE':i%7===0?'EA_M_Env_Bush_LeafClusterLarge_01ax_PRE':i%5===0?'EA_M_Env_Dry_Grass_01a_PRE':'EA_M_Env_Grass_01a_PRE';put(id,x,z,(id==='EA_M_Env_Grass_01a_PRE'?.3:.7)+hash(cx,cz,i+87)*.5,hash(cx,cz,i+91)*6.28,false,true);
+  const id=i%9===0?'EA_M_Env_Flower_01a_PRE':i%13===0?'EA_M_Env_Flower_01b_PRE':i%7===0?'EA_M_Env_Bush_LeafClusterLarge_01ax_PRE':i%5===0?'EA_M_Env_Dry_Grass_01a_PRE':'EA_M_Env_Grass_01a_PRE';const grass=id==='EA_M_Env_Grass_01a_PRE',m=put(id,x,z,(grass?.14:.7)+hash(cx,cz,i+87)*(grass?.07:.5),hash(cx,cz,i+91)*6.28,false,true);if(m&&grass)m.meadow=true;
  }
  if(['quarry','mountain','cave','lake','wild'].includes(region.id))for(let i=0;i<12;i++){const x=cx*32+hash(cx,cz,i+181)*32,z=cz*32+hash(cx,cz,i+219)*32;if(reserve(x,z)||height(x,z)<0)continue;put(i<2?'EA01_Env_Clif_01a':'EA01_Env_Rock_01b',x,z,i<2?.8+hash(cx,cz,i)*.7:.2+hash(cx,cz,i)*.45,hash(cx,cz,i+303)*6.28,i<5,i>=5);}
  for(let i=0;i<4;i++){const x=cx*32+4+hash(cx,cz,i+801)*24,z=cz*32+4+hash(cx,cz,i+901)*24,bio=biomeAt(x,z);if(reserve(x,z)||height(x,z)<0)continue;const type=bio.resources[i%bio.resources.length];resources.push({id:`v2:${key}:${i}`,type,x,z,model:type==='scrap'?'Box_1':type==='wood'?'TreeTrunk_1_1_A':type==='fiber'?'EA_M_Env_Bush_BerryDome_01a_PRE':'EA01_Env_Rock_01c'});}

@@ -1,5 +1,6 @@
-const CACHE = "noverive-v51-coherent-world";
+const CACHE = "noverive-v52-living-ground";
 const FILES = [
+  "./src/rendering/meadow.js",
   "./assets/openworld/SM_Tree_A_1.glb",
   "./assets/openworld/SM_Tree_F_1.glb",
   "./assets/openworld/SM_FarmSign_1_A.glb",

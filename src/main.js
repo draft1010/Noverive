@@ -1638,6 +1638,7 @@ function advanceTime(dt) {
       state.day % 3 === 0 ? "pluie" : state.day % 2 === 0 ? "nuages" : "soleil";
   }
   tickFarm(state, dt);
+  for(const p of state.plots)world.plotMeshes.get(p.id)?.g.userData.setMoisture(p.water);
 }
 function updateLighting() {
   const h = state.time,
@@ -2181,6 +2182,6 @@ if(location.port==='4186' && new URLSearchParams(location.search).has('qa')){
  out.textContent=JSON.stringify(results,null,1);panel.dataset.qaReport=JSON.stringify(results);
  }catch(e){out.textContent=e.stack;}finally{qaRunning=false;}});
  qaButton('Qualité basse',()=>{state.settings.quality='low';applySettings();});qaButton('Qualité haute',()=>{state.settings.quality='high';applySettings();});qaButton('Masquer',()=>{panel.hidden=true;});window.addEventListener('keydown',e=>{if(e.key==='F9')panel.hidden=!panel.hidden;});qaButton('Panorama',()=>{input.zoom=19;input.angle=0;});qaButton('Cultures',()=>{warp(-96,190);state.plots.forEach((p,i)=>{p.seed=['seed','wheatSeed','carrotSeed','flaxSeed','pumpkinSeed'][i%5];p.stage=4;p.water=1;});world.sync(state);});qaButton('Expéditions',()=>openExpeditions());qaButton('Vue large',()=>{input.zoom=42;});qaButton('TPS',()=>{input.zoom=12;});
- qaButton('Domaine entier',()=>{warp(-118,183);input.zoom=65;input.angle=0;});qaButton('Maison',()=>{warp(PLAN.door.x,PLAN.door.z);enterHome('home');});qaButton('Café',()=>{warp(-34,24);enterHome('house--40-24');});qaButton('Sac',()=>openMenu('bag'));qaButton('Fabriquer',()=>openMenu('craft'));qaButton('Carte',()=>openMenu('map'));qaButton('Combat',()=>{const w=world.wild.find(w=>w.id!=='gardien');if(w)startBattle(w);});
+ qaButton('Sol sec et arrosé',()=>{warp(-108,194);input.zoom=26;input.angle=0;state.plots.forEach((p,i)=>{p.stage=0;p.water=0;if(i%2===0)farmAction(state,p,'water');});syncWorld();});qaButton('Domaine entier',()=>{warp(-118,183);input.zoom=65;input.angle=0;});qaButton('Maison',()=>{warp(PLAN.door.x,PLAN.door.z);enterHome('home');});qaButton('Café',()=>{warp(-34,24);enterHome('house--40-24');});qaButton('Sac',()=>openMenu('bag'));qaButton('Fabriquer',()=>openMenu('craft'));qaButton('Carte',()=>openMenu('map'));qaButton('Combat',()=>{const w=world.wild.find(w=>w.id!=='gardien');if(w)startBattle(w);});
  setInterval(()=>{const d=window.ambreluneDiagnostics();panel.querySelector('#qaReadout').textContent=JSON.stringify({fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,position:d.state.player,grip:player?.userData.arms[1]?.getWorldPosition(new T.Vector3()).toArray(),tool:heldTool?{parent:heldTool.parent?.name,scale:heldTool.getWorldScale(new T.Vector3()).toArray(),bounds:new T.Box3().setFromObject(heldTool).getSize(new T.Vector3()).toArray()}:null,memory:d.memory,streaming:d.streaming,errors:d.errors},null,1);},1000);
 }
