@@ -37,5 +37,5 @@ http
     }
   })
   .listen(Number(process.env.PORT) || 4173, "127.0.0.1", () =>
-    console.log("Ambrelune : http://localhost:4173"),
+    console.log(`Noverive : http://localhost:${Number(process.env.PORT)||4173}`),
   );

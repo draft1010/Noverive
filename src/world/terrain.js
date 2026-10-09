@@ -1,15 +1,8 @@
 export const riverX = (z) => 19 + Math.sin(z * 0.04) * 1.5;
 export function baseTerrainHeight(x, z) {
-  let h = Math.max(
-    0.1,
-    0.35 +
-      Math.sin(x * 0.075) * 0.45 +
-      Math.cos(z * 0.085) * 0.32 +
-      Math.max(0, -z - 12) * 0.058 +
-      Math.exp(-((x - 43) ** 2 + (z + 34) ** 2) / 500) * 3.5,
-  );
-  const terrace = Math.max(0, Math.min(1, (8 - x) / 5));
-  h += terrace * Math.max(0, Math.min(1, (-z - 31) / 4)) * 2.6;
+  let h=.4;
+  if(x>30){const t=Math.min(1,(x-30)/55);h+=t*(.6+Math.sin(x*.025)*Math.cos(z*.023)*1.5);h+=Math.max(0,Math.min(1,(x-125)/90))*Math.max(0,Math.min(1,(-z-70)/110))*22;}
+  const lake=Math.hypot((x-145)/1.2,z-110);if(lake<34)return -.85;if(lake<43)h*=Math.max(0,(lake-34)/9);
   const dist = Math.abs(x - riverX(z));
   if (dist < 4.7) return -0.85;
   if (dist < 7) h *= Math.min(1, (dist - 4.7) / 2.3);

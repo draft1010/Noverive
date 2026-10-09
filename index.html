@@ -9,17 +9,17 @@
     <meta name="theme-color" content="#244d46" />
     <meta
       name="description"
-      content="Un RPG original de créatures, de jardins et d'exploration. Les Jardins d’Ambrelune."
+      content="Un RPG original de créatures, de jardins et d'exploration. Noverive."
     />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/icon.svg" />
-    <link rel="stylesheet" href="./style.css?v=22" />
-    <title>Les Jardins d’Ambrelune</title>
+    <link rel="stylesheet" href="./style.css?v=40" />
+    <title>Noverive</title>
     <script type="importmap">
       {
         "imports": {
           "three": "./vendor/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+          "three/addons/": "./vendor/addons/"
         }
       }
     </script>
@@ -28,13 +28,13 @@
     <canvas
       id="world"
       tabindex="0"
-      aria-label="Monde d’Ambrelune. Déplacement ZQSD ou flèches, E pour interagir."
+      aria-label="Monde de Noverive. Déplacement ZQSD ou flèches, E pour interagir."
     ></canvas>
     <div id="loading">
-      <span class="sigil">❧</span>
-      <h1>Ambrelune</h1>
+      <span class="sigil">◈</span>
+      <h1>Noverive</h1>
       <p id="loadingText">Préparation des jardins…</p>
-      <div class="loading-progress" role="progressbar" aria-label="Chargement d’Ambrelune" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="loading-progress" role="progressbar" aria-label="Chargement de Noverive" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <i id="loadingBar"></i>
       </div>
       <small id="loadingPercent">0 %</small>
@@ -42,8 +42,8 @@
     <main id="hud" hidden>
       <header>
         <div class="brand" hidden>
-          <span>❧</span>
-          <div>AMBRELUNE<small id="region">Les terrasses d’Ambre</small></div>
+          <span>◈</span>
+          <div>NOVERIVE<small id="region">Les terrasses d’Ambre</small></div>
         </div>
         <div class="timecard">
           <span id="weatherIcon">☀</span>
@@ -95,9 +95,9 @@
     <section id="intro" hidden>
       <div class="introCopy">
         <span class="eyebrow">UN MONDE À APPRIVOISER</span>
-        <h1>Les Jardins<br />d’<em>Ambrelune</em></h1>
+        <h1 class="noverive-title"><img src="./assets/noverive-logo.svg" alt="Noverive"></h1>
         <p>
-          Une maison oubliée. Des jardins qui murmurent.<br />Et un petit
+          La ville à vos pieds. La nature à l’horizon.<br />Et un petit
           compagnon pour tout recommencer.
         </p>
         <button class="primary" id="newBtn">
@@ -105,14 +105,14 @@
         ><button id="continueBtn" hidden>Reprendre mon voyage</button
         ><small>EXPLORATION · CRÉATURES · VIE AU JARDIN</small>
       </div>
-      <div class="edition">PREMIÈRE RÉGION <i></i> Les terres de la Sève</div>
+      <div class="edition">EXPLORATION LIBRE <i></i> Ville, nature & créatures</div>
     </section>
     <div id="modal" hidden>
       <section
         class="paper"
         role="dialog"
         aria-modal="true"
-        aria-label="Carnet d’Ambrelune"
+        aria-label="Carnet de Noverive"
       >
         <button id="closeModal" aria-label="Fermer">×</button>
         <div id="modalContent"></div>
@@ -152,6 +152,6 @@
       window.addEventListener('error', event => showStartupError(event.message || 'Un fichier du jeu n’a pas été chargé.'));
       window.addEventListener('unhandledrejection', event => showStartupError(event.reason?.message || String(event.reason)));
     </script>
-    <script type="module" src="./src/main.js?v=22" onerror="showStartupError('Impossible de charger le jeu. Vérifiez votre connexion puis actualisez la page.')"></script>
+    <script type="module" src="./src/main.js?v=40" onerror="showStartupError('Impossible de charger le jeu. Vérifiez votre connexion puis actualisez la page.')"></script>
   </body>
 </html>

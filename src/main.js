@@ -1,3 +1,6 @@
+import {EXPEDITIONS,expeditionReady,completeExpedition} from './systems/expeditions.js';
+import {disposeFurniture} from './rendering/modern-furniture.js';
+import {REGIONS,biomeAt,CITY_X,CITY_Z} from './world/regions.js';
 import { prepareOccluders, updateCutawayScreen } from './rendering/occlusion.js';
 import { FishingSession } from './rendering/fishing.js';
 import { Interior, indoorHeight, indoorCollision, indoorPlacementCollision } from './rendering/interior.js';
@@ -148,8 +151,8 @@ let interior = null;
 prepareOccluders(scene);
 const currentScene = () => interior?.scene || scene;
 const surfaceHeight = (x,z) => interior ? indoorHeight(x,z,state.player.y||0) : height(x,z);
-const solidAt = (x,z,r=.4) => interior ? indoorCollision(x,z,r,state.player.y||0) : world.collides(x,z,r);
-const placementSolidAt = (x,z,r=.12) => interior ? indoorPlacementCollision(x,z,r,state.player.y||0) : world.collides(x,z,r);
+const solidAt = (x,z,r=.4) => interior ? interior.collides(x,z,r,state.player.y||0) : world.collides(x,z,r);
+const placementSolidAt = (x,z,r=.12) => interior ? (indoorPlacementCollision(x,z,r,state.player.y||0)||interior.fixedColliders.some(c=>Math.abs((state.player.y||0)-c.y)<1&&Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r)) : world.collides(x,z,r);
 const snapPlacement = (value,type) => { const step=(interior||type==='fence')?.1:1; return Math.round(value/step)*step; };
 const fenceEnds=(x,z,r)=>{const hx=Math.cos(r)*.95,hz=-Math.sin(r)*.95;return [{x:x+hx,z:z+hz},{x:x-hx,z:z-hz}];};
 function refinePlacement(x,z,type,r=0,movingIndex=-1){
@@ -178,7 +181,7 @@ function enterHome(location='home') {
  sceneTransition();
  cancelBuild();closeModal();input.target=null;input.route=[];
  state.outdoorPlayer={...state.player};state.location=location;
- interior=new Interior();prepareOccluders(interior.root);interior.scene.add(player);companion.visible=false;
+ interior=new Interior(location);prepareOccluders(interior.root);interior.scene.add(player);companion.visible=false;
  state.player={x:0,z:4.5,y:0};player.position.set(0,0,4.5);
  input.zoom=7;camera.fov=55;camera.updateProjectionMatrix();cameraTarget.set(0,1,4.5);camera.position.set(3,2.7,7.3);
  interior.sync(state);document.body.classList.add('indoors');persist();
@@ -521,7 +524,7 @@ function begin(s) {
 }
 function introChoice() {
   showModal(
-    `<span class="eyebrow">PROLOGUE · LA LETTRE DE MAËLLE</span><h2>« Le jardin t’attend. »</h2><p>Votre tante vous a légué une maison aux portes d’Ambrelune. Depuis que la Source s’est tue, les jardins perdent leur éclat. Maëlle pense qu’un nouveau lien pourrait les réveiller.</p><div class="settings"><label>Votre nom <input id="playerName" value="Élo" maxlength="24" aria-label="Votre nom"></label></div><div class="cards">${SPECIES.slice(
+    `<span class="eyebrow">PROLOGUE · LA LETTRE DE MAËLLE</span><h2>« Le jardin t’attend. »</h2><p>Votre tante vous a légué une maison aux portes de Noverive. Depuis que la Source s’est tue, les jardins perdent leur éclat. Maëlle pense qu’un nouveau lien pourrait les réveiller.</p><div class="settings"><label>Votre nom <input id="playerName" value="Élo" maxlength="24" aria-label="Votre nom"></label></div><div class="cards">${SPECIES.slice(
       0,
       3,
     )
@@ -547,7 +550,7 @@ function introChoice() {
         }
         closeModal();
         begin(s);
-        toast("Bienvenue à Ambrelune. Maëlle vous attend près de la fontaine.");
+        toast("Bienvenue à Noverive. Maëlle vous attend près de la fontaine.");
       }),
   );
 }
@@ -772,6 +775,7 @@ function nearby() {
     z: p.z,
     distance: Math.abs(p.x - (riverX(p.z) - 6)),
   });
+  if(!interior){const angle=Math.atan2(p.z-110,(p.x-145)/1.2),x=145+Math.cos(angle)*43*1.2,z=110+Math.sin(angle)*43;list.push({type:'fish',name:'Pêcher au lac des Reflets',x,z,lake:true,distance:Math.hypot(x-p.x,z-p.z)});}
   list.sort((a, b) => a.distance - b.distance);
   return list.find((v) => v.distance < (v.type === "wild" ? 3.3 : 2.5));
 }
@@ -787,6 +791,7 @@ function interact() {
   input.target = null;
   actionTimer = 0.65;
   player.rotation.y = Math.atan2(a.x - state.player.x, a.z - state.player.z);
+  if(a.type === 'expedition')return openExpeditions();
   if(a.type === "exit") return leaveHome();
   if(a.type === "furniture") return furnishingMenu(a.index);
   if (a.type === "npc") {
@@ -842,6 +847,7 @@ function interact() {
     }
     state.depleted[a.id] = state.day + 2;
     a.source.mesh.visible = false;
+    if(a.source.collider)a.source.collider.disabled=true;
     world.burst(
       a.x,
       surfaceHeight(a.x, a.z) + 0.5,
@@ -860,8 +866,9 @@ function interact() {
   }
   if (a.type === "home") { player.userData.playAction?.("Interact"); return enterHome(a.location || "home"); }
   if (a.type === "workbench") { player.userData.playAction?.("Interact"); return openMenu("craft"); }
-  if (a.type === "fish") { player.userData.playAction?.("Interact"); return fishing(); }
+  if (a.type === "fish") { player.userData.playAction?.("Interact"); return fishing(a); }
 }
+function openExpeditions(){showModal('<span class="eyebrow">MAISON DES EXPLORATEURS</span><h2>Les expéditions de Noverive</h2><p>Explorez, récoltez et contribuez à la vie de la région.</p><div class="rows">'+EXPEDITIONS.map(e=>'<article class="row"><div><b>'+e.name+'</b><p>'+e.text+'</p><small>'+e.coins+' ambres · '+(state.flags['expedition:'+e.id]?'Terminée':expeditionReady(state,e)?'Prête à remettre':'En cours')+'</small></div><button data-expedition="'+e.id+'" '+(!expeditionReady(state,e)?'disabled':'')+'>Remettre</button></article>').join('')+'</div>');document.querySelectorAll('[data-expedition]').forEach(b=>b.onclick=()=>{if(completeExpedition(state,b.dataset.expedition)){persist();updateHUD();openExpeditions();}});}
 function dialogue(n) {
   const met = state.friendship[n.name] || 0;
   let text,
@@ -873,7 +880,7 @@ function dialogue(n) {
       : "Te voilà enfin ! Ta maison est au sud-ouest, au bout du chemin clair. J’ai laissé douze graines dans ton sac. Plante trois roselles et donne-leur de l’eau. Ton compagnon t’aidera si tu l’affectes au jardin depuis le carnet.";
     actions =
       '<button id="guideHome" class="primary">Marquer ma propriété</button>';
-  } else if (["Soline", "Orin"].includes(n.name)) {
+  } else if (["Soline", "Orin"].includes(n.name) || n.role?.startsWith("Commerçant")) {
     text =
       n.name === "Orin"
         ? "De bonnes graines, de l’eau et un peu de patience. Je rachète aussi tes récoltes."
@@ -917,7 +924,7 @@ function shop() {
       ["seed", 5],
       ["wheatSeed",7],["carrotSeed",6],["flaxSeed",8],["pumpkinSeed",10],
       ["seal", 18],
-      ["potion", 15],
+      ["potion", 15],["table",40],["chair",20],["sleepingBed",80],["chest",35],["stove",90],
     ]
       .map(
         ([id, price]) =>
@@ -988,10 +995,11 @@ function home() {
     audio.play("harvest");
   };
 }
-function fishing() {
+function fishing(spot=null) {
  if(fishingSession||interior)return;
  input.target=null;input.route=[];input.keys.clear();
- fishingSession=new FishingSession(scene,player,riverX(state.player.z)-1,state.player.z,(success,message)=>{fishingSession=null;if(success){if(!add(state,'fish'))return toast('Votre sac est plein. Le poisson est relâché.');audio.play('harvest');persist();}toast(message);});
+ const angle=Math.atan2(state.player.z-110,(state.player.x-145)/1.2);
+ fishingSession=new FishingSession(scene,player,spot?.lake?145+Math.cos(angle)*30*1.2:riverX(state.player.z)-1,spot?.lake?110+Math.sin(angle)*30:state.player.z,(success,message)=>{fishingSession=null;if(success){if(!add(state,'fish'))return toast('Votre sac est plein. Le poisson est relâché.');audio.play('harvest');persist();}toast(message);});
 }
 const tabs = [
   ["team", "Compagnons", "Vos liens et votre équipe active"],
@@ -1027,7 +1035,7 @@ function openMenu(tab = modalTab) {
   if (tab === "craft") html = craftView(state, craftCanAfford, craftAvailable, craftOutputFits);
   if (tab === "build") html = gardenView(state);
   if (tab === "map")
-    html = `<div class="menu-lead"><div><span class="section-kicker">TERRES DE LA SÈVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu découvert pour y poser votre repère.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
+    html = `<div class="menu-lead"><div><span class="section-kicker">RÉGION DE NOVERIVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu découvert pour y poser votre repère.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
       (l) => state.discovered.includes(l.id),
     )
       .map((l) => `<button data-mark="${l.id}"><span>◇</span>${l.name}</button>`)
@@ -1038,16 +1046,16 @@ function openMenu(tab = modalTab) {
     html = `<div class="story-hero"><span class="section-kicker">LE FIL DES JARDINS</span><h3>Une histoire qui s’écrit avec vos pas</h3><p>Le silence de la Source n’est pas une fin. Maëlle en est certaine : chaque nouvelle amitié, chaque jardin restauré lui rend une part de sa voix.</p></div><div class="story-progress">${QUESTS.map((q, i) => `<article class="story-step ${i < state.quest ? "done" : i === state.quest ? "current" : "locked"}"><div class="story-marker">${i < state.quest ? "✓" : i === state.quest ? "◇" : i + 1}</div><div><small>${i < state.quest ? "ACCOMPLI" : i === state.quest ? "EN COURS" : "À VENIR"}</small><h3>${q.title}</h3><p>${i <= state.quest ? q.text : "Une nouvelle page reste à écrire."}</p></div></article>`).join("")}</div><div class="journey-stats"><div><small>LIENS TISSÉS</small><b>${state.stats.captured}</b></div><div><small>RÉCOLTES</small><b>${state.stats.harvested}</b></div><div><small>AMÉNAGEMENTS</small><b>${state.buildings.length}</b></div><div><small>JOUR ACTUEL</small><b>${state.day}</b></div></div>`;
   if (tab === "bestiary") {
     const linked = SPECIES.filter((c) => state.team.some((t) => t.id === c.id)).length;
-    html = `<div class="menu-lead"><div><span class="section-kicker">CODEX DES CRÉATURES</span><h3>Le bestiaire d’Ambrelune</h3><p>Observez leur tempérament, leur élément et les lieux où elles apparaissent. Certaines ne se montrent qu’à des conditions particulières.</p></div><div class="menu-stat"><small>LIENS TISSÉS</small><b>${linked}<em> / ${SPECIES.length}</em></b></div></div><div class="bestiary-grid">${SPECIES.map((c, index) => {
+    html = `<div class="menu-lead"><div><span class="section-kicker">CODEX DES CRÉATURES</span><h3>Le bestiaire de Noverive</h3><p>Observez leur tempérament, leur élément et les lieux où elles apparaissent. Certaines ne se montrent qu’à des conditions particulières.</p></div><div class="menu-stat"><small>LIENS TISSÉS</small><b>${linked}<em> / ${SPECIES.length}</em></b></div></div><div class="bestiary-grid">${SPECIES.map((c, index) => {
       const owned = state.team.some((t) => t.id === c.id);
       return `<article class="bestiary-card ${owned ? "linked" : ""}" style="--species:${c.color};--species-accent:${c.accent}"><div class="bestiary-number">N° ${String(index + 1).padStart(2, "0")}</div><div class="bestiary-portrait">${creaturePortrait3D(c.id, "bestiary")}</div><div class="bestiary-info"><div class="bestiary-topline"><span class="element-chip">${ELEMENT_NAMES[c.element]}</span><span class="rarity">${"◆".repeat(Math.min(c.rarity, 5))}${"◇".repeat(Math.max(0, 5 - c.rarity))}</span></div><h3>${c.name}</h3><p>${c.desc}</p><div class="bestiary-meta"><span><small>HABITAT</small>${c.habitat}</span><span><small>TEMPÉRAMENT</small>${c.temper}</span></div><div class="bestiary-status">${owned ? "✦ Lien tissé" : "○ À rencontrer"}</div></div></article>`;
     }).join("")}</div>`;
   }
   if (tab === "settings")
-    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Adapte ombres et finesse du rendu.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${["Basse · optimisée", "Moyenne", "Haute", "Ultra"][i]}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons d’Ambrelune</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.4 · Interface Ambrelune · Sauvegarde locale versionnée</small>`;
+    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Adapte ombres et finesse du rendu.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${["Basse · optimisée", "Moyenne", "Haute", "Ultra"][i]}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.4 · Interface Noverive · Sauvegarde locale versionnée</small>`;
   const current = tabs.find((t) => t[0] === tab) || tabs[0];
   showModal(
-    `<div class="journal-shell"><aside class="journal-sidebar"><div class="journal-brand"><span class="journal-sigil">❧</span><div><b>AMBRELUNE</b><small>CARNET DE ${esc(state.name).toUpperCase()}</small></div></div><nav class="journal-nav">${tabs.map(([id, label]) => `<button data-tab="${id}" aria-label="${label}" title="${label}" class="${id === tab ? "selected" : ""}">${tabIcon(id)}<span>${label}</span><i></i></button>`).join("")}</nav><div class="journal-sidebar-foot"><div><small>JOUR</small><b>${state.day}</b></div><div><small>AMBRE</small><b>◈ ${state.coins}</b></div></div></aside><section class="journal-page"><header class="journal-page-header"><div><span class="eyebrow">${current[2].toUpperCase()}</span><h2>${current[1]}</h2></div><div class="journal-day"><small>${state.weather.toUpperCase()}</small><b>${$("clock").textContent || "08:00"}</b><span>${$("calendar").textContent || `Jour ${state.day}`}</span></div></header><div class="journal-content">${html}</div></section></div>`,
+    `<div class="journal-shell"><aside class="journal-sidebar"><div class="journal-brand"><span class="journal-sigil">❧</span><div><b>NOVERIVE</b><small>CARNET DE ${esc(state.name).toUpperCase()}</small></div></div><nav class="journal-nav">${tabs.map(([id, label]) => `<button data-tab="${id}" aria-label="${label}" title="${label}" class="${id === tab ? "selected" : ""}">${tabIcon(id)}<span>${label}</span><i></i></button>`).join("")}</nav><div class="journal-sidebar-foot"><div><small>JOUR</small><b>${state.day}</b></div><div><small>AMBRE</small><b>◈ ${state.coins}</b></div></div></aside><section class="journal-page"><header class="journal-page-header"><div><span class="eyebrow">${current[2].toUpperCase()}</span><h2>${current[1]}</h2></div><div class="journal-day"><small>${state.weather.toUpperCase()}</small><b>${$("clock").textContent || "08:00"}</b><span>${$("calendar").textContent || `Jour ${state.day}`}</span></div></header><div class="journal-content">${html}</div></section></div>`,
   );
   document
     .querySelectorAll("[data-tab]")
@@ -1128,6 +1136,7 @@ function openMenu(tab = modalTab) {
         const i = +b.dataset.remove;
         if(!recover(state,i))return toast("Videz ce rangement avant de le récupérer.");
         world.buildMeshes.forEach((g) => {
+          disposeFurniture(g);
           g.traverse((o) => {
             if (o.isInstancedMesh) o.dispose();
           });
@@ -1200,7 +1209,7 @@ function openMenu(tab = modalTab) {
         url = URL.createObjectURL(blob),
         a = document.createElement("a");
       a.href = url;
-      a.download = `ambrelune-jour-${state.day}.json`;
+      a.download = `noverive-jour-${state.day}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 3000);
     };
@@ -1214,6 +1223,7 @@ function openMenu(tab = modalTab) {
         for (const o of world.plotMeshes.values()) scene.remove(o.g);
         world.plotMeshes.clear();
         world.buildMeshes.forEach((g) => {
+          disposeFurniture(g);
           g.traverse((o) => {
             if (o.isInstancedMesh) o.dispose();
           });
@@ -1375,7 +1385,7 @@ function drawMap(c) {
     w = c.width,
     h = c.height,
     large = w > 200,
-    scale = large ? Math.min(w / 140, h / 130) : 1.35,
+    scale = large ? Math.min(w / 650, h / 650) : 1.35,
     cx = large ? 0 : state.player.x,
     cz = large ? -4 : state.player.z;
   const pt = (x, z) => [w / 2 + (x - cx) * scale, h / 2 + (z - cz) * scale];
@@ -1399,14 +1409,17 @@ function drawMap(c) {
   g.strokeStyle = "#8ab8ad";
   g.lineWidth = 8 * scale;
   g.beginPath();
-  for (let z = -70; z < 70; z++) {
+  for (let z = -320; z < 320; z++) {
     const [x, y] = pt(riverX(z), z);
-    z === -70 ? g.moveTo(x, y) : g.lineTo(x, y);
+    z === -320 ? g.moveTo(x, y) : g.lineTo(x, y);
   }
   g.stroke();
   g.lineWidth = 2 * scale;
   g.strokeStyle = "#c6b590";
   for (const line of [
+    ...CITY_X.map(x=>[x,-200,x,56]),
+    ...CITY_Z.map(z=>[-256,z,-80,z]),
+    [-256,8,256,8],
     [-9, -55, -9, 24],
     [-48, -19, 5, -19],
     [-48, 8, 50, 8],
@@ -1418,6 +1431,7 @@ function drawMap(c) {
     g.lineTo(...pt(line[2], line[3]));
     g.stroke();
   }
+  for (const region of REGIONS) { if(!large)break;const [rx,rz]=pt(region.x,region.z);g.fillStyle="#315c51";g.font="10px sans-serif";g.fillText(region.name,rx,rz-12); }
   for (const b of world.colliders.filter((b) => b.kind === "rect")) {
     g.fillStyle = "#afa78b";
     const [x, y] = pt(b.x, b.z);
@@ -2011,7 +2025,7 @@ let portraitBlocked=false;
 const orientationPrompt=document.createElement('section');
 orientationPrompt.id='orientationPrompt';orientationPrompt.hidden=true;
 orientationPrompt.setAttribute('role','dialog');orientationPrompt.setAttribute('aria-modal','true');orientationPrompt.setAttribute('aria-labelledby','orientationTitle');
-orientationPrompt.innerHTML='<span class="orientation-icon" aria-hidden="true">↻</span><h2 id="orientationTitle">Tournez votre téléphone</h2><p>Ambrelune se joue en paysage.<br>Tournez votre écran pour continuer.</p><button type="button">Activer le mode paysage</button>';
+orientationPrompt.innerHTML='<span class="orientation-icon" aria-hidden="true">↻</span><h2 id="orientationTitle">Tournez votre téléphone</h2><p>Noverive se joue en paysage.<br>Tournez votre écran pour continuer.</p><button type="button">Activer le mode paysage</button>';
 document.body.append(orientationPrompt);
 orientationPrompt.querySelector('button').onclick=requestGameFullscreen;
 const orientationInert=new Set();let orientationPreviousFocus=null;
@@ -2137,13 +2151,15 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && started && !battle) $("hud").hidden = false;
 });
 // Read-only diagnostics, also rendered in the opt-in performance HUD.
-window.ambreluneDiagnostics = () => ({
+window.noveriveDiagnostics = window.ambreluneDiagnostics = () => ({
   fps,
   frameMs,
   drawCalls: renderer.info.render.calls,
   triangles: renderer.info.render.triangles,
   chunks: world.chunks.filter((c) => c.g.visible).length,
   errors: [...errors],
+  streaming: world.streamer?.stats(),
+  memory: {...renderer.info.memory},
   state: JSON.parse(JSON.stringify(state)),
   webgl: renderer.capabilities.isWebGL2,
 });
@@ -2218,7 +2234,7 @@ async function startup() {
   await waitForWorldModels();
   setLoadingProgress(99, "Derniers préparatifs…");
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  setLoadingProgress(100, "Ambrelune est prête.");
+  setLoadingProgress(100, "Noverive est prête.");
   await new Promise((resolve) => setTimeout(resolve, 180));
 
   $("loading").hidden = true;
@@ -2228,8 +2244,8 @@ async function startup() {
 
 loop();
 startup().catch((error) => {
-  console.warn("[Ambrelune] Préchargement incomplet, démarrage avec fallbacks.", error);
-  setLoadingProgress(100, "Ambrelune est prête.");
+  console.warn("[Noverive] Préchargement incomplet, démarrage avec fallbacks.", error);
+  setLoadingProgress(100, "Noverive est prête.");
   $("loading").hidden = true;
   $("intro").hidden = false;
   $("continueBtn").hidden = !load();
@@ -2241,3 +2257,24 @@ if ("serviceWorker" in navigator)
 
 // Development harness imports; no automatic test execution.
 export { state, world, player, camera, renderer, input, begin, enterHome, leaveHome, openMenu, closeModal, startBuild, placeBuilding, cancelBuild, furnishingMenu, movePlayer, updateCamera, syncWorld, selectTool, fishing, startBattle, endBattle, interior, battle, applyMove };
+// Test controls are restricted to the isolated QA origin and explicit query flag.
+if(location.port==='4186' && new URLSearchParams(location.search).has('qa')){
+ const panel=document.createElement('details');panel.id='qaPanel';panel.open=true;panel.style.cssText='position:fixed;left:8px;bottom:8px;z-index:9999;background:#142e32ed;color:white;padding:8px;max-width:96vw;font:12px monospace';panel.innerHTML='<summary>Vérifications de la refonte</summary><div id="qaActions"></div><pre id="qaReadout" style="max-height:140px;overflow:auto"></pre>';document.body.append(panel);
+ const actions=panel.querySelector('#qaActions');
+ function qaButton(label,fn){const b=document.createElement('button');b.textContent=label;b.style.cssText='font:12px sans-serif;padding:5px;margin:2px';b.onclick=fn;actions.append(b);}
+ function warp(x,z){if(!started){const q=newState();q.settings.sound=false;begin(q);}if(interior)leaveHome();if(battle)endBattle('Fin du test');closeModal();state.player={x,z};input.target=null;input.keys.clear();cameraTarget.set(x,height(x,z)+1,z);movePlayer(0);}
+ for(const [label,x,z] of [['Place',-9,8],['Centre',-168,-72],['Ferme',-32,29],['Forêt',82,30],['Lac',100,110],['Carrière',110,-80],['Grotte',192,-120],['Crêtes',210,-190],['Réserve',235,210]])qaButton(label,()=>warp(x,z));
+ let qaRunning=false;
+ qaButton('Parcours complet',async()=>{if(qaRunning)return;qaRunning=true;const results=[];let out=document.getElementById('qaResults');if(!out){out=document.createElement('pre');out.id='qaResults';out.style.cssText='max-height:160px;overflow:auto;max-width:600px;white-space:pre-wrap';panel.append(out);}try{
+ for(let pass=0;pass<2;pass++)for(const [name,x,z] of [['centre',-168,-72],['ferme',-32,29],['foret',82,30],['lac',100,110],['carriere',110,-80],['grotte',192,-120],['cretes',210,-190],['reserve',235,210]]){
+  warp(x,z);out.textContent='Parcours '+(pass+1)+' : '+name;const until=performance.now()+20000;let stable=0;
+  while(performance.now()<until){await new Promise(r=>setTimeout(r,250));if(world.streamer.pending===0&&world.streamer.stats().missing===0){stable++;if(stable>=4)break;}else stable=0;}
+  const d=window.noveriveDiagnostics();results.push({pass,name,fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,...d.memory,active:d.streaming.active,cached:d.streaming.cached,errors:d.errors.length+d.streaming.errors.length+d.streaming.failures.length,settled:stable>=4});
+ }
+ out.textContent=JSON.stringify(results,null,1);panel.dataset.qaReport=JSON.stringify(results);
+ }catch(e){out.textContent=e.stack;}finally{qaRunning=false;}});
+ qaButton('Expéditions',()=>openExpeditions());qaButton('Vue large',()=>{input.zoom=42;});qaButton('TPS',()=>{input.zoom=12;});
+ qaButton('Maison',()=>{warp(-36,29);enterHome('home');});qaButton('Café',()=>{warp(-20,-1);enterHome('house--20--1');});qaButton('Sac',()=>openMenu('bag'));qaButton('Fabriquer',()=>openMenu('craft'));qaButton('Carte',()=>openMenu('map'));qaButton('Combat',()=>{const w=world.wild.find(w=>w.id!=='gardien');if(w)startBattle(w);});
+ setInterval(()=>{const d=window.ambreluneDiagnostics();panel.querySelector('#qaReadout').textContent=JSON.stringify({fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,position:d.state.player,memory:d.memory,streaming:d.streaming,errors:d.errors},null,1);},1000);
+}
+

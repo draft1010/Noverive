@@ -1,5 +1,5 @@
 import { T, creature as proceduralCreature } from "./art.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { GLTFLoader } from "../../vendor/addons/loaders/GLTFLoader.js";
 
 /*
  * Ambrelune - acteurs de monstres glTF

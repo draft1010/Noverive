@@ -60,7 +60,7 @@ export function findPath(start, end, blocked) {
         if (!dx && !dz) continue;
         const x = n.x + dx,
           z = n.z + dz;
-        if (Math.abs(x) > 67 || z < -66 || z > 61 || blocked(x, z)) continue;
+        if (Math.abs(x) > 319 || Math.abs(z) > 319 || blocked(x, z)) continue;
         if (dx && dz && (blocked(n.x + dx, n.z) || blocked(n.x, n.z + dz)))
           continue;
         const k2 = key(x, z),

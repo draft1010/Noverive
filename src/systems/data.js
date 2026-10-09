@@ -1,3 +1,4 @@
+import {REGIONS} from '../world/regions.js';
 import { LABELS, EXTRA_RECIPES } from "./homestead.js";
 export const SPECIES = [
   {
@@ -222,6 +223,7 @@ export const ELEMENT_NAMES = {
 };
 export const ITEMS = {
   ...LABELS,
+  scrap: "Composants recyclables",
   wood: "Bois",
   stone: "Pierre",
   fiber: "Fibres",
@@ -242,6 +244,7 @@ export const ITEMS = {
 };
 export const RECIPES = [
   ...EXTRA_RECIPES,
+  {id:"iron",name:"Recycler les composants",cost:{scrap:4},count:1,desc:"Transformer les pièces récupérées en métal réutilisable."},
   {
     id: "seal",
     name: "Lien de résonance",
@@ -353,12 +356,17 @@ export const TOOLS = [
   ["journal", "☷", "Carnet"],
 ];
 export const LANDMARKS = [
+  {id:"downtown",name:"Centre des Horizons",x:-168,z:-72},
+  {id:"lake",name:"Lac des Reflets",x:103,z:110},
+  {id:"mountain",name:"Crêtes du Levant",x:210,z:-190},
+  {id:"cave",name:"Grotte de Résonance",x:192,z:-120},
+  {id:"wild",name:"Réserve des Lointains",x:235,z:210},
   { id: "city", name: "Place des Trois Sources", x: -9, z: 1 },
   { id: "home", name: "Votre jardin", x: -29, z: 28 },
   { id: "forest", name: "Bois des Murmures", x: 40, z: 14 },
-  { id: "ruins", name: "Sanctuaire de Sève", x: 42, z: -38 },
-  { id: "market", name: "Marché des Tisserands", x: -30, z: -19 },
-  { id: "quarry", name: "Carrière dorée", x: 39, z: 40 },
+  { id: "ruins", name: "Arène de Résonance", x: 42, z: -38 },
+  { id: "market", name: "Marché des Sources", x: -30, z: -19 },
+  { id: "quarry", name: "Carrière des Roches Claires", x: 110, z: -80 },
   { id: "heights", name: "Les Hauts-Vergers", x: -23, z: -48 },
 ];
 export function species(id) {
@@ -370,3 +378,6 @@ export function portrait(id) {
     a = s.accent;
   return `<svg viewBox="0 0 120 105" aria-label="${s.name}" role="img"><ellipse cx="60" cy="92" rx="35" ry="6" fill="#24483c18"/><path d="M32 62 Q14 25 35 15 Q53 26 48 53 M72 52 Q70 16 93 14 Q110 39 83 63" fill="${a}" stroke="${c}" stroke-width="6"/><path d="M22 71 Q21 40 59 37 Q100 39 99 73 Q97 92 60 93 Q25 93 22 71" fill="${c}"/><ellipse cx="61" cy="77" rx="23" ry="14" fill="${a}"/><circle cx="43" cy="62" r="5" fill="#213e37"/><circle cx="79" cy="62" r="5" fill="#213e37"/><circle cx="44" cy="60" r="1.7" fill="white"/><circle cx="80" cy="60" r="1.7" fill="white"/><path d="M56 73q5 5 10 0" stroke="#4c5f48" fill="none" stroke-width="2"/><path d="M30 83L24 95h17 M80 87l-1 8h17" fill="${c}"/>${s.shape === "leaf" ? '<path d="M52 38Q32 2 61 7Q75 20 63 38" fill="#6b925e"/><path d="M60 33Q64 8 86 15Q91 36 60 40" fill="#c2c887"/>' : ""}${s.shape === "ember" ? '<path d="M47 38Q43 20 56 6Q54 21 69 20Q83 35 68 41" fill="#f6c982"/>' : ""}${s.shape === "lantern" ? '<circle cx="61" cy="26" r="17" fill="#fff1ac" opacity=".8"/>' : ""}</svg>`;
 }
+
+// Bestiary descriptions follow the actual regional encounter pools.
+for(const creature of SPECIES) creature.habitat=creature.id==='gardien'?'Arène de Résonance':REGIONS.filter(r=>r.species.includes(creature.id)).map(r=>r.name).join(' · ');

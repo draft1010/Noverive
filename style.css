@@ -4532,3 +4532,13 @@ body.inventory-dragging{overscroll-behavior:none}
 #modal[hidden] {
   display:none !important;
 }
+/* Noverive: contemporary typography, warm paper and blue-green accents. */
+:root{--ink:#163d46;--green:#245c64;--paper:#f5f4e9;--gold:#e4ad60}
+body,button,input,select,textarea{font-family:Arial,Helvetica,sans-serif}
+h1,h2,h3,h4,.primary{font-family:Arial,Helvetica,sans-serif}
+#intro .noverive-title{line-height:1;margin:20px 0 24px;max-width:570px;width:min(570px,86vw)}
+.noverive-title img{display:block;width:100%;height:auto}
+#intro{background:linear-gradient(90deg,rgba(244,246,231,.95) 0%,rgba(244,246,231,.76) 36%,rgba(244,246,231,.04) 76%)}
+#intro .introCopy{max-width:620px}
+#qaPanel button{color:#173f48;background:#eef4e9;border:0;border-radius:4px;min-height:28px}
+@media(max-width:600px){#intro .noverive-title{max-width:360px;width:84vw}#intro{background:linear-gradient(90deg,#f4f6e7ee,#f4f6e799)}.modal h2{font-size:clamp(20px,5vw,30px)}}

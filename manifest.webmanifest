@@ -1,14 +1,14 @@
 {
   "id": "./",
-  "name": "Les Jardins d’Ambrelune",
-  "short_name": "Ambrelune",
-  "description": "Un monde de créatures et de jardins à apprivoiser.",
+  "name": "Noverive",
+  "short_name": "Noverive",
+  "description": "Une ville vivante, une ferme à faire grandir et des créatures à rencontrer dans un monde moderne.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#244d46",
-  "theme_color": "#244d46",
+  "background_color": "#163d46",
+  "theme_color": "#163d46",
   "icons": [
     {
       "src": "assets/icon-192.png",
