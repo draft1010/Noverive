@@ -4,19 +4,19 @@ import {PLAN,CITY_BOUNDS,inCity} from './plan.js';
 import {height,riverX,clearLandmark} from './terrain.js';
 const layouts=new Map();
 export function footprintFor(p){const a=ASSETS[p.id],s=p.s??1,c=Math.abs(Math.cos(p.r||0)),t=Math.abs(Math.sin(p.r||0));return {x:p.x,z:p.z,w:(a.size[0]*c+a.size[2]*t)*s,d:(a.size[0]*t+a.size[2]*c)*s,kind:'rect',r:0,y:p.y??height(p.x,p.z),height:a.size[1]*s};}
+// Reserve the whole footprint, including rotated eaves, foliage and field borders.
+export function overlapsRoad(p){const f=footprintFor(p),nx=Math.max(1,Math.ceil(f.w)),nz=Math.max(1,Math.ceil(f.d));for(let i=0;i<=nx;i++)for(let j=0;j<=nz;j++)if(roadAt(f.x-f.w/2+f.w*i/nx,f.z-f.d/2+f.d*j/nz))return true;return false;}
 export const FIXED=[
  {id:'Fountain_1_A',x:-24,z:28,s:1.6},
- {id:'Building_3_1_A',x:-40,z:24,s:1.2,r:Math.PI},
+ {id:'Building_3_1_A',x:-40,z:24,s:.85,r:Math.PI},
  {id:'CafeSign_5_A',x:-35,z:21,s:1,solid:false},
- {id:'Building_2_1_A',x:-8,z:24,s:1.2,r:0},
+ {id:'Building_2_1_A',x:-8,z:24,s:.85,r:0},
  {id:'Kiosk_1_A',x:-78,z:24,s:1.1},
  {id:'FoodCart_1_A',x:-62,z:28,s:1},
- {id:'IceTruck_1_A',x:-70,z:36,s:1},
  {id:'SM_House_1_A',x:PLAN.home.x,z:PLAN.home.z,s:.9},
  {id:'SM_Barn_1_A',x:-144,z:182,s:1},
  {id:'SM_Silos_1_A',x:-155,z:176,s:1},
- {id:'SM_Tractor_1_A',x:-130,z:199,s:1},
- {id:'SM_GreenHouse_1_A',x:-62,z:196,s:1},
+ {id:'SM_GreenHouse_1_A',x:-145,z:208,s:1},
  {id:'SM_Hay_1',x:-133,z:179,s:1},
  {id:'SM_Hay_1',x:-133,z:182,s:1.2},
  {id:'StationTable_1_A',x:PLAN.workshop.x,z:PLAN.workshop.z,s:1.3},
@@ -30,8 +30,8 @@ function reserve(x,z){return roadAt(x,z)||isFarm(x,z)||fields(x,z)||clearLandmar
 export function sectorLayout(cx,cz){
  const key=`${cx},${cz}`;if(layouts.has(key)){const value=layouts.get(key);layouts.delete(key);layouts.set(key,value);return value;}
  const models=[],colliders=[],resources=[];
- function put(id,x,z,s=1,r=0,solid=true,detail=false){if(chunkKey(x,z)!==key||!ASSETS[id])return;const p={id,x,z,y:height(x,z),s,r,detail};models.push(p);if(solid){const c=/Tree/.test(id)?{x,z,r:(id.startsWith('EA01_Env_Tree')?1.65:.42)*s,kind:'circle'}:footprintFor(p);c.y=p.y;c.height=ASSETS[id].size[1]*s;colliders.push(c);}return p;}
- function building(id,x,z,rotation=0,maxWidth=10,maxDepth=12){const a=ASSETS[id],s=Math.min(1.15,maxWidth/a.size[0],maxDepth/a.size[2]);return put(id,x,z,s,rotation+Math.PI/2);}
+ function put(id,x,z,s=1,r=0,solid=true,detail=false){if(chunkKey(x,z)!==key||!ASSETS[id])return;const p={id,x,z,y:height(x,z),s,r,detail};if(!/^(Road_|StreetTile_)/.test(id)&&overlapsRoad(p))return;models.push(p);if(solid){const c=/Tree/.test(id)?{x,z,r:(id.startsWith('EA01_Env_Tree')?1.65:.42)*s,kind:'circle'}:footprintFor(p);c.y=p.y;c.height=ASSETS[id].size[1]*s;colliders.push(c);}return p;}
+ function building(id,x,z,rotation=0,maxWidth=10,maxDepth=12){const a=ASSETS[id],r=rotation+Math.PI/2,c=Math.abs(Math.cos(r)),t=Math.abs(Math.sin(r)),s=Math.min(1.15,maxWidth/(a.size[0]*c+a.size[2]*t),maxDepth/(a.size[0]*t+a.size[2]*c));return put(id,x,z,s,rotation+Math.PI/2);}
  function garden(x,z,r=0){put('FlowerPlacet_5_1_A',x,z,1,r);for(let k=-3;k<=3;k++){const d=k*.49,dx=Math.sin(r)*d,dz=Math.cos(r)*d;const bush=put('Bush_1_A_1',x+dx,z+dz,.46,r,false,true);if(bush)bush.y+=.66;for(const side of [-1,1]){const flower=put(k%2?'Flowers_1_A':'Flowers_2_A',x+dx+Math.cos(r)*side*.34,z+dz-Math.sin(r)*side*.34,1.35,r,false,true);if(flower)flower.y+=.73;}}}
  for(const p of FIXED){const m=put(p.id,p.x,p.z,p.s,p.r,p.solid!==false);if(m)m.y+=p.dy||0;}
  // Roads are exact 8 m modules. Raised paving is instanced and has a world-aligned stone material beneath it.
@@ -62,18 +62,25 @@ export function sectorLayout(cx,cz){
   // Every street has a continuous furnished edge, with free pedestrian corridors.
   for(const d of [10,24,38]){put('StreetLamp_3_A',bx+5.5,bz+d,1);put('StreetLamp_3_A',bx+d,bz+5.5,1);}
   for(const d of [17,33]){put('FlowerPlace_6_A',bx+6,bz+d,.7,0,false);put('Tree_A_1',bx+6,bz+d,1.2);put('Trashbin_1_A',bx+d,bz+5.5,1,0,true,true);garden(bx+d,bz+6,Math.PI/2);}
-  put(['Car_1_A','Car_5_A','Car_7_A','Taxi_1','PostCar_1_A'][Math.floor(h*5)],bx+2.6,bz+24,1,0);
+
   if(h>.55)put('BusStop_A',bx+31,bz+5.8,1);
   for(let d=6;d<=42;d+=2){put('StreetTile_1_A_1',bx+d,bz+5,1,0,false,true);put('StreetTile_1_A_1',bx+5,bz+d,1,0,false,true);}
  }
  // Farmland and orchard rows make the property part of a working landscape.
  for(let x=Math.floor(cx*32/10)*10;x<cx*32+32;x+=10)for(let z=Math.floor(cz*32/10)*10;z<cz*32+32;z+=10){if(fields(x,z)){put('SM_Field_1_4_A',x,z,1.2,0,false);for(const dx of [-2,0,2])for(const dz of [-2,0,2]){const id=z%30===0?'SM_CornPlant':'SM_Plant_Wheat';put(id,x+dx,z+dz,1.15/ASSETS[id].size[1],0,false,true);}}}
  if(cz*32>220&&cx*32<-300)for(let x=cx*32+6;x<cx*32+32;x+=12)for(let z=cz*32+6;z<cz*32+32;z+=12)if(!roadAt(x,z))put('Tree_7_AA',x,z,1.05);
- for(let x=-122;x<=-74;x+=2.1)for(const z of [172,212])if(Math.abs(x+96)>3)put('WallFence_1_1_A',x,z,1);
- for(let z=172;z<212;z+=2.1)for(const x of [-122,-74])put('WallFence_1_1_A',x,z,1,Math.PI/2);
+ for(let x=PLAN.farm.left;x<=PLAN.farm.right;x+=2.5)for(const z of [PLAN.farm.top,PLAN.farm.bottom])put('SM_Fence_1_2_A',x,z,.8,Math.PI/2);
+ for(let z=PLAN.farm.top;z<PLAN.farm.bottom;z+=2.5)for(const x of [PLAN.farm.left,PLAN.farm.right])if(Math.abs(z-168)>3)put('SM_Fence_1_2_A',x,z,.8);
+ // Managed orchard, productive beds and entrance planting inside the farm fence.
+ for(const x of [-155,-143,-131])for(const z of [148,158])put('SM_Tree_A_1',x,z,1.2);
+ for(const z of [198,206,214]){put('SM_Field_3_1',-128,z,.65,0,false);for(const dx of [-1,1])for(const dz of [-1,1])put(z===198?'SM_TomatoPlant_1_A':z===206?'SM_CornPlant':'SM_Sunflower_4',-128+dx,z+dz,.65,0,false);}
+ for(const x of [-119,-79]){garden(x,149,Math.PI/2);garden(x,159,Math.PI/2);}
+ put('Bench_1_A',-83,163,1,Math.PI);put('SM_WateringCan_1_A',-116,179,.8,0,false);
+ put('SM_FarmSign_1_A',-78,174,.45);put('SM_LetterBox_1_1_A',-78,163,1.2);
  // Rock cavern: vaulted pieces follow the new mountain contour, keeping the corridor open.
  for(const x of [465,475,485]){for(const z of [-357,-343])put('EA01_Env_Clif_01a',x,z,.65,Math.PI/2);const roof=put('EA01_Env_Clif_01b',x,-350,.8,0,false);if(roof){roof.y+=6.5;roof.sy=.12;roof.sx=.8;roof.sz=.8;}}
  const region=biomeAt(cx*32+16,cz*32+16),natural=region.id!=='downtown';
+ if(region.id==='forest'){const x=cx*32+16,z=cz*32+16;if(!reserve(x,z))put('SM_Tree_F_1',x,z,1,hash(cx,cz)*6.28,false,true);}
  const trees=['forest','wild'].includes(region.id)?24:['farm','suburb'].includes(region.id)?7:region.id==='lake'?8:4;
  if(natural)for(let i=0;i<trees;i++){
   const x=cx*32+hash(cx,cz,i*7+1)*32,z=cz*32+hash(cx,cz,i*7+2)*32;if(reserve(x,z)||height(x,z)<.05||inCity(x,z)||models.some(p=>!p.detail&&Math.hypot(x-p.x,z-p.z)<3.2))continue;
@@ -89,4 +96,4 @@ export function sectorLayout(cx,cz){
  const result={models,colliders,resources};layouts.set(key,result);if(layouts.size>512)layouts.delete(layouts.keys().next().value);return result;
 }
 export function staticCollision(x,z,r=.4,cameraY=null){for(let cx=Math.floor((x-28)/32);cx<=Math.floor((x+28)/32);cx++)for(let cz=Math.floor((z-28)/32);cz<=Math.floor((z+28)/32);cz++)for(const c of sectorLayout(cx,cz).colliders)if((cameraY===null||(cameraY>c.y-.2&&cameraY<c.y+c.height+.1))&&(c.kind==='rect'?(Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r):Math.hypot(x-c.x,z-c.z)<c.r+r))return true;return false;}
-export function resourceLocations(cx,cz){return sectorLayout(cx,cz).resources.filter(r=>!staticCollision(r.x,r.z,.8));}
+export function resourceLocations(cx,cz){return sectorLayout(cx,cz).resources.filter(r=>!staticCollision(r.x,r.z,.8)&&!overlapsRoad({id:r.model,x:r.x,z:r.z,s:r.type==='fiber'?.42:r.type==='wood'?1.1:.22}));}

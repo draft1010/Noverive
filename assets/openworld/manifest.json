@@ -4595,5 +4595,89 @@
       0.00002530217170715332
     ],
     "minY": -0.0004950912552885711
+  },
+  {
+    "external": [
+      "../../Textures/farm_atlas.png"
+    ],
+    "file": "./assets/openworld/SM_Tree_A_1.glb",
+    "archive": "Farm Pack Godot.zip",
+    "id": "SM_Tree_A_1",
+    "source": "Farm Pack/Models/Nature/SM_Tree_A_1.glb",
+    "rotationX": 0,
+    "size": [
+      1.267341673374176,
+      3.4755808303901574,
+      1.3043212890625
+    ],
+    "center": [
+      -0.029294699430465698,
+      1.737790277096181,
+      0.05254018306732178
+    ],
+    "minY": -1.3809889765070693e-7
+  },
+  {
+    "external": [
+      "../../Textures/farm_atlas.png"
+    ],
+    "file": "./assets/openworld/SM_Tree_F_1.glb",
+    "archive": "Farm Pack Godot.zip",
+    "id": "SM_Tree_F_1",
+    "source": "Farm Pack/Models/Nature/SM_Tree_F_1.glb",
+    "rotationX": 0,
+    "size": [
+      1.4023146629333496,
+      1.5438118875026703,
+      6.422370433807373
+    ],
+    "center": [
+      -0.014202296733856201,
+      0.3074057847261429,
+      0.03644394874572754
+    ],
+    "minY": -0.46450015902519226
+  },
+  {
+    "external": [
+      "../../Textures/farm_atlas.png"
+    ],
+    "file": "./assets/openworld/SM_FarmSign_1_A.glb",
+    "archive": "Farm Pack Godot.zip",
+    "id": "SM_FarmSign_1_A",
+    "source": "Farm Pack/Models/Fences and Roads/SM_FarmSign_1_A.glb",
+    "rotationX": 0,
+    "size": [
+      0.4704519808292389,
+      4.586239351945551,
+      5.468277454376221
+    ],
+    "center": [
+      -9.5367431640625e-7,
+      2.293062918326541,
+      -0.05264592170715332
+    ],
+    "minY": -0.000056757646234473214
+  },
+  {
+    "external": [
+      "../../Textures/farm_atlas.png"
+    ],
+    "file": "./assets/openworld/SM_LetterBox_1_1_A.glb",
+    "archive": "Farm Pack Godot.zip",
+    "id": "SM_LetterBox_1_1_A",
+    "source": "Farm Pack/Models/Fences and Roads/SM_LetterBox_1_1_A.glb",
+    "rotationX": 0,
+    "size": [
+      0.3737197704613209,
+      1.2123477663844824,
+      0.7390672639012337
+    ],
+    "center": [
+      0.02755987085402012,
+      0.5927846925333142,
+      0.06141737475991249
+    ],
+    "minY": -0.013389190658926964
   }
 ]

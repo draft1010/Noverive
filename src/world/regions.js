@@ -17,7 +17,9 @@ const gridDistance=n=>Math.abs(n-Math.round(n/48)*48);
 export function roadAt(x,z){
  if(inCity(x,z)&&(gridDistance(x)<4||gridDistance(z)<4))return 'city';
  if(x>0&&x<820&&Math.abs(z-8)<3.8)return 'country';
- if(x>-760&&x<0&&z>96&&Math.abs(x+96)<3.8)return 'country';
+ if(z>96&&z<120&&Math.abs(x+96)<3.8)return 'country';
+ if(x>=-100&&x<=-60&&Math.abs(z-120)<3.8)return 'country';
+ if(z>=120&&Math.abs(x+64)<3.8)return 'country';
  if(x>28&&Math.abs(x-(180+Math.sin(z*.006)*38))<2.2)return 'trail';
  if(x>170&&x<740&&Math.abs(z+350)<2.2)return 'trail';
  if(x>180&&x<430&&Math.abs(z-280)<2.2)return 'trail';

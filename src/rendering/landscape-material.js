@@ -12,11 +12,18 @@ export function landscapeMaterial(){
   `).replace('#include <color_fragment>',`#include <color_fragment>
    vec2 p=vLandscape.xz;
    float broad=noise2(p*.17),small=noise2(p*4.0),fine=noise2(p*32.0);
-   if(vSurface<.5){
+   float surface=vSurface;
+   bool city=p.x>=-768.&&p.x<=0.&&p.y>=-576.&&p.y<=96.;
+   vec2 grid=abs(p-floor(p/48.+.5)*48.);
+   bool country=(p.y>96.&&p.y<120.&&abs(p.x+96.)<3.8)||(p.x>=-100.&&p.x<=-60.&&abs(p.y-120.)<3.8)||(p.y>=120.&&abs(p.x+64.)<3.8)||(p.x>0.&&p.x<820.&&abs(p.y-8.)<3.8);
+   bool trail=(p.x>28.&&abs(p.x-(180.+sin(p.y*.006)*38.))<2.2)||(p.x>170.&&p.x<740.&&abs(p.y+350.)<2.2)||(p.x>180.&&p.x<430.&&abs(p.y-280.)<2.2)||(p.x>-130.&&p.x<-68.&&abs(p.y-168.)<2.);
+   if(city)surface=(grid.x<4.||grid.y<4.)?3.:(vSurface<.5?0.:1.);
+   else if(country)surface=3.;else if(trail)surface=2.;else surface=length(vec2((p.x-410.)/1.25,p.y-280.))<96.?4.:0.;
+   if(surface<.5){
     float blades=smoothstep(.50,.82,noise2(p*vec2(40.0,7.0)));
     diffuseColor.rgb*=.83+broad*.22+small*.09+blades*.055;
     diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.14,1.04,.78),smoothstep(.55,.8,noise2(p*.31))*.3);
-   }else if(vSurface<1.5){
+   }else if(surface<1.5){
     vec2 q=p*1.25;
     vec2 uv=fract(q),aa=fwidth(q)*.85;
     vec2 edge=smoothstep(vec2(.018),vec2(.018)+aa,min(uv,1.0-uv));
@@ -24,11 +31,11 @@ export function landscapeMaterial(){
     float tile=grain(floor(q));
     diffuseColor.rgb=vec3(.48,.50,.49)*(.91+tile*.18+fine*.04)*mix(.67,1.0,grout);
     if(distance(p,vec2(-24.,28.))<12.){float ring=abs(fract(distance(p,vec2(-24.,28.))*.5)-.5);diffuseColor.rgb*=mix(.67,1.0,smoothstep(.025,.05,ring));}
-   }else if(vSurface<2.5){diffuseColor.rgb=vec3(.34,.27,.18)*(.78+broad*.32+small*.25+fine*.12);}
-   else if(vSurface<3.5){diffuseColor.rgb=vec3(.17,.19,.19)*(.88+small*.12+fine*.15);}
+   }else if(surface<2.5){diffuseColor.rgb=vec3(.34,.27,.18)*(.78+broad*.32+small*.25+fine*.12);}
+   else if(surface<3.5){diffuseColor.rgb=vec3(.17,.19,.19)*(.88+small*.12+fine*.15);}
    else{diffuseColor.rgb=vec3(.53,.47,.32)*(.85+broad*.18+fine*.12);}
   `);
  };
- material.customProgramCacheKey=()=> 'noverive-landscape-v2';
+ material.customProgramCacheKey=()=> 'noverive-landscape-v3';
  return material;
 }

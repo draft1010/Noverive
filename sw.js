@@ -1,5 +1,9 @@
-const CACHE = "noverive-v50-horizons";
+const CACHE = "noverive-v51-coherent-world";
 const FILES = [
+  "./assets/openworld/SM_Tree_A_1.glb",
+  "./assets/openworld/SM_Tree_F_1.glb",
+  "./assets/openworld/SM_FarmSign_1_A.glb",
+  "./assets/openworld/SM_LetterBox_1_1_A.glb",
   "./assets/characters/animations/UAL1_Standard.glb",
   "./assets/characters/animations/UAL2_Standard.glb",
   "./assets/characters/base/Superhero_Female_FullBody.bin",
