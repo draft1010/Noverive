@@ -4,6 +4,8 @@ import {height,riverX,onBridge} from './terrain.js';
 const layouts=new Map();
 export function footprintFor(p){const a=ASSETS[p.id],s=p.s||1,c=Math.abs(Math.cos(p.r||0)),t=Math.abs(Math.sin(p.r||0));return {x:p.x,z:p.z,w:(a.size[0]*c+a.size[2]*t)*s,d:(a.size[0]*t+a.size[2]*c)*s,kind:'rect',r:0};}
 export const FIXED=[
+ {id:'Kiosk_1_A',x:-148,z:-52,s:1},
+ {id:'FoodCart_1_A',x:-148,z:-44,s:1},
  {id:'SM_House_1_A',x:-36,z:25,s:.39},
  {id:'SM_Barn_1_A',x:-57,z:52,s:.8},
  {id:'SM_Silos_1_A',x:-67,z:50,s:.7},

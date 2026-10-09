@@ -1,4 +1,4 @@
-const CACHE = "noverive-v40-open-world";
+const CACHE = "noverive-v41-open-world";
 const FILES = [
 "./src/world/asset-catalog.js",
 "./src/world/layout.js",
@@ -269,3 +269,4 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request,{ignoreSearch:true})),
   );
 });
+

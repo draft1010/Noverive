@@ -24,6 +24,7 @@ export function buildModernWorld(w){
  for(let x=-44;x<=-16;x+=2){if(x>-29&&x<-23)continue;furnishing(f,'fence',x,height(x,42),42);w.collider(x,42,0,'rect',1.9,.3);}
  furnishing(f,'workbench',-40,height(-40,32),32);
  w.interactables.push({type:'expedition',name:'Consulter les expéditions',x:-9,z:-5},{type:'expedition',name:'Maison des Explorateurs · missions',x:-35,z:-43},{type:'home',name:'Votre maison · entrer',x:-36,z:28.3},{type:'workbench',name:'Atelier de la ferme',x:-40,z:32});
+ w.interactables.push({type:'shop',name:'Marché des Horizons · acheter et vendre',x:-148,z:-48.5},{type:'expedition',name:'Kiosque des Horizons · expéditions',x:-144.5,z:-52});
  for(const [x,z,name] of [[-20,-1,'Café des Sources'],[1,-5,'Maison des Jardins'],[-35,-43,'Maison des Explorateurs']])w.interactables.push({type:'home',name:`${name} · entrer`,location:`house-${x}-${z}`,x,z});
  // Existing final encounter remains reachable at its original quest coordinates.
  f.part('cylinder','#c4d4cb',43,terrainHeight(43,-39)+.18,-39,5.5,.36,5.5);f.part('torus','#65b6ae',43,height(43,-39)+3,-43,2,2,2);

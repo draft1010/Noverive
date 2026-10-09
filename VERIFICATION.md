@@ -1,3 +1,7 @@
+# Refonte Noverive — 9 octobre 2026
+
+Voir REFONTE-NOVERIVE.md pour le périmètre livré, les assets, les tests et les limites de validation mobile. Cache v41. 33 tests automatisés réussis, scénarios navigateur et parcours de régions sans erreur signalée. Les entrées ci-dessous décrivent les révisions historiques antérieures.
+
 # Révision outils, fontaine et faune — 4 octobre 2026
 
 Modifications dans le dossier du Bureau. Cache v11.
@@ -150,4 +154,5 @@ Les trois grands formats affichaient 20 secteurs de végétation sur 25. Le masq
 - Endurance sur plusieurs heures et mesure des pires temps d’image dans toutes les zones.
 
 Le fonctionnement hors ligne a été testé après une première visite en ligne. L’installation mobile et un premier démarrage sans réseau ne sont pas couverts par ce test.
+
 

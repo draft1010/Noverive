@@ -1938,9 +1938,10 @@ export function furnishing(
   r = 0,
 ) {
   f.onFurnishing?.(type,x,z,r);
-  if (['sleepingBed','chest','furnace','table','chair','shelf','rug','stove','wardrobe','composter'].includes(type)) {
+  if (['sofa','sleepingBed','chest','furnace','table','chair','shelf','rug','stove','wardrobe','composter'].includes(type)) {
     const box=(color,dx,dy,dz,w,h,d,kind='wood',glow=0)=>f.part('box',color,x+dx*Math.cos(r)+dz*Math.sin(r),y+dy,z-dx*Math.sin(r)+dz*Math.cos(r),w,h,d,0,r,0,kind,glow);
     if(type==='rug') box('#a96d67',0,.025,0,2.8,.05,2,'cloth');
+    else if(type==='sofa'){box('#487f83',0,.4,0,2,.65,1.6,'cloth');box('#699795',0,.9,-.65,2,.75,.3,'cloth');for(const dx of [-.88,.88])box('#699795',dx,.7,0,.25,.5,1.6,'cloth');}
     else if(type==='sleepingBed') {box('#94734e',0,.32,0,1.8,.5,2.5);box('#ebe0c3',0,.66,0,1.7,.25,2.3,'cloth');box('#759986',0,.81,.25,1.72,.08,1.65,'cloth');box('#f4e7d2',0,.87,-.8,1.2,.18,.5,'cloth');box('#806244',0,.75,-1.2,1.85,1.1,.12);}
     else if(['furnace','stove'].includes(type)){box('#8e8d7c',0,.65,0,1.6,1.3,1.2,'stone');box('#443d34',0,.5,.61,.9,.6,.04,'');box('#ed9b4b',0,.4,.64,.65,.16,.04,'',.5);box('#807967',.45,1.6,-.3,.5,1.1,.5,'stone');}
     else if(type==='chest'||type==='wardrobe'){const h=type==='chest'?.9:2.3;box('#98724c',0,h/2,0,1.7,h,1);for(const dx of [-.65,.65])box('#686a5a',dx,h/2,.51,.08,h,.04,'');box('#d1b06b',0,h*.65,.54,.12,.14,.05,'');}

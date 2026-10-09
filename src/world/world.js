@@ -104,7 +104,7 @@ export class World {
       ["Alba", "Voyageuse", -9, -40, "#ac8981", "alba"],
     ];
     npcData.forEach(([name, role, x, z, color, characterKind], i) => {
-      const mesh = modernCharacter(i%4+1);
+      const mesh = modernCharacter(i%3+1);
       mesh.position.set(x, height(x, z), z);
       mesh.rotation.y = i;
       this.scene.add(mesh);
@@ -165,7 +165,7 @@ export class World {
       });
     });
     for(let i=0;i<16;i++){
-      const x=-242+(i%4)*40,z=-147+Math.floor(i/4)*40,mesh=modernCharacter(i%4+1);
+      const x=-242+(i%4)*40,z=-147+Math.floor(i/4)*40,mesh=modernCharacter(i%3+1);
       mesh.position.set(x,height(x,z),z);this.scene.add(mesh);
       this.npcs.push({name:['Lina','Sam','Milo','Nora','Jules','Aya','Lou','Eden'][i%8]+(i>7?' · Horizons':''),role:i%4===0?'Commerçant des Horizons':'Habitant des Horizons',x,z,homeX:x,homeZ:z,mesh,phase:i,route:[{x,z},{x,z:z+20},{x:x+20,z:z+20},{x,z}]});
     }
@@ -593,3 +593,4 @@ export class World {
     }
   }
 }
+

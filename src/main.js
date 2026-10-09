@@ -14,7 +14,8 @@ import {
   storageView,
 } from "./rendering/journal-ui.js";
 import { BattleStage } from "./rendering/battle-stage.js";
-import { character, characterActionForTool, preloadCharacterAssets } from "./rendering/character-assets.js?v=22";
+import { characterActionForTool } from "./rendering/character-assets.js?v=22";
+import { modernCharacter, preloadModernCharacters as preloadCharacterAssets } from './rendering/modern-character.js';
 import { modelCreature, preloadMonsterModels } from "./rendering/monster-models.js?v=22";
 import {
   creaturePortrait3D,
@@ -185,7 +186,7 @@ function enterHome(location='home') {
  state.player={x:0,z:4.5,y:0};player.position.set(0,0,4.5);
  input.zoom=7;camera.fov=55;camera.updateProjectionMatrix();cameraTarget.set(0,1,4.5);camera.position.set(3,2.7,7.3);
  interior.sync(state);document.body.classList.add('indoors');persist();
- toast('Bienvenue chez vous. L’escalier est à droite. Approchez de la porte pour sortir.');
+ toast(location==='home'?'Bienvenue chez vous. L’escalier est à droite. Approchez de la porte pour sortir.':location==='house--20--1'?'Bienvenue au Café des Sources. Approchez de la porte pour sortir.':'Bienvenue. L’escalier est à droite ; la sortie est derrière vous.');
 }
 function leaveHome() {
  sceneTransition();
@@ -468,9 +469,9 @@ function ensurePlots() {
         });
 }
 function setupActors() {
-  if (player) player.removeFromParent();
+  if (player) { player.removeFromParent();player.userData.dispose?.(); }
   if (companion) { companion.removeFromParent();companion.userData.dispose?.(); }
-  player = character("player", state.color);
+  player = modernCharacter(4,true);
   currentScene().add(player);
   player.position.set(
     state.player.x,
@@ -792,6 +793,7 @@ function interact() {
   actionTimer = 0.65;
   player.rotation.y = Math.atan2(a.x - state.player.x, a.z - state.player.z);
   if(a.type === 'expedition')return openExpeditions();
+  if(a.type === 'shop')return shop();
   if(a.type === "exit") return leaveHome();
   if(a.type === "furniture") return furnishingMenu(a.index);
   if (a.type === "npc") {
@@ -924,7 +926,7 @@ function shop() {
       ["seed", 5],
       ["wheatSeed",7],["carrotSeed",6],["flaxSeed",8],["pumpkinSeed",10],
       ["seal", 18],
-      ["potion", 15],["table",40],["chair",20],["sleepingBed",80],["chest",35],["stove",90],
+      ["potion", 15],["sofa",95],["table",40],["chair",20],["sleepingBed",80],["chest",35],["stove",90],
     ]
       .map(
         ([id, price]) =>
