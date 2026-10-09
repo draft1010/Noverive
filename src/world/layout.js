@@ -1,94 +1,92 @@
 import {ASSETS} from './asset-catalog.js';
-import {biomeAt,roadAt,isFarm,hash,chunkKey} from './regions.js';
-import {height,riverX,onBridge} from './terrain.js';
+import {biomeAt,roadAt,isFarm,hash,chunkKey,blockKind} from './regions.js';
+import {PLAN,CITY_BOUNDS,inCity} from './plan.js';
+import {height,riverX,clearLandmark} from './terrain.js';
 const layouts=new Map();
-export function footprintFor(p){const a=ASSETS[p.id],s=p.s||1,c=Math.abs(Math.cos(p.r||0)),t=Math.abs(Math.sin(p.r||0));return {x:p.x,z:p.z,w:(a.size[0]*c+a.size[2]*t)*s,d:(a.size[0]*t+a.size[2]*c)*s,kind:'rect',r:0};}
+export function footprintFor(p){const a=ASSETS[p.id],s=p.s??1,c=Math.abs(Math.cos(p.r||0)),t=Math.abs(Math.sin(p.r||0));return {x:p.x,z:p.z,w:(a.size[0]*c+a.size[2]*t)*s,d:(a.size[0]*t+a.size[2]*c)*s,kind:'rect',r:0,y:p.y??height(p.x,p.z),height:a.size[1]*s};}
 export const FIXED=[
- {id:'Kiosk_1_A',x:-148,z:-52,s:1},
- {id:'FoodCart_1_A',x:-148,z:-44,s:1},
- {id:'SM_House_1_A',x:-36,z:25,s:.39},
- {id:'SM_Barn_1_A',x:-57,z:52,s:.8},
- {id:'SM_Silos_1_A',x:-67,z:50,s:.7},
- {id:'SM_Tractor_1_A',x:-50,z:46,s:1},
- {id:'SM_GreenHouse_1_A',x:-57,z:78,s:.8},
- {id:'SM_Hay_1',x:-50,z:58,s:1},
- {id:'SM_Hay_1',x:-52,z:58,s:1},
- {id:'Axe_A',x:-40.5,z:32,s:1,dy:1.1,solid:false},
- {id:'Hammer_1_A',x:-39.6,z:32,s:1,dy:1.1,solid:false},
- {id:'Kiosk_1_A',x:-28,z:-17,s:1},
- {id:'FoodCart_1_A',x:-38,z:-17,s:1},
- {id:'Building_12_A',x:-20,z:-7,s:1},
- {id:'Building_13_A',x:1,z:-9,s:1},
- {id:'Building_10_A',x:-35,z:-49,s:1.2},
- {id:'Building_14_A',x:-54,z:-49,s:1},
- {id:'Building_1_A',x:-62,z:-18,s:1},
- {id:'Building_26_A',x:-45,z:-30,s:1},
- {id:'Bench_1_A',x:-5,z:0,s:1,r:Math.PI/2},
- {id:'Bench_1_A',x:-13,z:0,s:1,r:Math.PI/2},
- {id:'StreetLamp_3_A',x:-4,z:7,s:1},
- {id:'StreetLamp_3_A',x:-14,z:7,s:1},
- {id:'BusStop_A',x:-55,z:3,s:1,r:Math.PI/2},
+ {id:'Fountain_1_A',x:-24,z:28,s:1.6},
+ {id:'Building_3_1_A',x:-40,z:24,s:1.2,r:Math.PI},
+ {id:'CafeSign_5_A',x:-35,z:21,s:1,solid:false},
+ {id:'Building_2_1_A',x:-8,z:24,s:1.2,r:0},
+ {id:'Kiosk_1_A',x:-78,z:24,s:1.1},
+ {id:'FoodCart_1_A',x:-62,z:28,s:1},
+ {id:'IceTruck_1_A',x:-70,z:36,s:1},
+ {id:'SM_House_1_A',x:PLAN.home.x,z:PLAN.home.z,s:.9},
+ {id:'SM_Barn_1_A',x:-144,z:182,s:1},
+ {id:'SM_Silos_1_A',x:-155,z:176,s:1},
+ {id:'SM_Tractor_1_A',x:-130,z:199,s:1},
+ {id:'SM_GreenHouse_1_A',x:-62,z:196,s:1},
+ {id:'SM_Hay_1',x:-133,z:179,s:1},
+ {id:'SM_Hay_1',x:-133,z:182,s:1.2},
+ {id:'StationTable_1_A',x:PLAN.workshop.x,z:PLAN.workshop.z,s:1.3},
+ {id:'Axe_A',x:-115.5,z:177,s:1,dy:1,solid:false},
+ {id:'Hammer_1_A',x:-114.5,z:177,s:1,dy:1,solid:false},
+ {id:'Basketball_Court_1',x:PLAN.arena.x,z:PLAN.arena.z,s:1.5,solid:false},
 ];
-const buildings=['Building_1_A','Building_4_A','Building_8_1_A','Building_15_A','Building_18_1_A','Building_24_A','Building_26_A','Building_10_A','Building_6_A','Building_14_A','Building_20_1_A','Building_3_1_A'];
-const field=(x,z)=>x>-110&&x<-28&&z>92&&z<146;
-function reserved(x,z){return isFarm(x,z)||field(x,z)||Math.hypot(x+9,z)<18||Math.hypot(x-43,z+39)<12||Math.abs(x-riverX(z))<8||roadAt(x,z);}
+const blocks=['Building_1_A','Building_2_1_A','Building_8_1_A','Building_10_A','Building_15_A','Building_18_1_A','Building_24_A','Building_26_A','Building_9_2_A','Building_11_1_A','Building_17_2_A','Building_21_3_A','Building_27_A'];
+const fields=(x,z)=>x>-280&&x<-140&&z>250&&z<520;
+function reserve(x,z){return roadAt(x,z)||isFarm(x,z)||fields(x,z)||clearLandmark(x,z)||Math.abs(x-riverX(z))<9||FIXED.some(p=>Math.hypot(x-p.x,z-p.z)<Math.max(5,Math.max(ASSETS[p.id].size[0],ASSETS[p.id].size[2])*(p.s||1)/2+2));}
 export function sectorLayout(cx,cz){
- const key=`${cx},${cz}`;if(layouts.has(key))return layouts.get(key);
+ const key=`${cx},${cz}`;if(layouts.has(key)){const value=layouts.get(key);layouts.delete(key);layouts.set(key,value);return value;}
  const models=[],colliders=[],resources=[];
- function put(id,x,z,s=1,r=0,solid=true){if(chunkKey(x,z)!==key)return;const p={id,x,z,y:height(x,z),s,r};models.push(p);if(solid){let c=footprintFor(p);if(/Tree/.test(id))c={x,z,r:.32*s,kind:'circle'};colliders.push(c);}return p;}
- for(const p of FIXED){const placed=put(p.id,p.x,p.z,p.s,p.r,p.solid!==false);if(placed)placed.y+=p.dy||0;}
- for(let x=-102;x<-32;x+=8)for(let z=100;z<140;z+=8)put(x<-70?'SM_Field_1_4_A':'SM_Field_3_1',x,z,1,0,false);
- for(let z=99;z<145;z+=3.2)put('SM_Fence_1_2_A',-110,z,1);
- // A walkable rock gallery: walls flank a clear corridor; roof pieces have no ground collider.
- for(const x of [192,202,212]){
-  for(const z of [-127,-113])put('EA01_Env_Clif_01a',x,z,.62,Math.PI/2);
-  const roof=put('EA01_Env_Clif_01b',x,-120,.75,0,false);if(roof){roof.y+=6.8;roof.sy=.12;roof.sx=.75;roof.sz=.75;}
+ function put(id,x,z,s=1,r=0,solid=true,detail=false){if(chunkKey(x,z)!==key||!ASSETS[id])return;const p={id,x,z,y:height(x,z),s,r,detail};models.push(p);if(solid){const c=/Tree/.test(id)?{x,z,r:(id.startsWith('EA01_Env_Tree')?1.65:.42)*s,kind:'circle'}:footprintFor(p);c.y=p.y;c.height=ASSETS[id].size[1]*s;colliders.push(c);}return p;}
+ function building(id,x,z,rotation=0,maxWidth=10,maxDepth=12){const a=ASSETS[id],s=Math.min(1.15,maxWidth/a.size[0],maxDepth/a.size[2]);return put(id,x,z,s,rotation+Math.PI/2);}
+ function garden(x,z,r=0){put('FlowerPlacet_5_1_A',x,z,1,r);for(let k=-3;k<=3;k++){const d=k*.49,dx=Math.sin(r)*d,dz=Math.cos(r)*d;const bush=put('Bush_1_A_1',x+dx,z+dz,.46,r,false,true);if(bush)bush.y+=.66;for(const side of [-1,1]){const flower=put(k%2?'Flowers_1_A':'Flowers_2_A',x+dx+Math.cos(r)*side*.34,z+dz-Math.sin(r)*side*.34,1.35,r,false,true);if(flower)flower.y+=.73;}}}
+ for(const p of FIXED){const m=put(p.id,p.x,p.z,p.s,p.r,p.solid!==false);if(m)m.y+=p.dy||0;}
+ // Roads are exact 8 m modules. Raised paving is instanced and has a world-aligned stone material beneath it.
+ for(let x=cx*32;x<cx*32+32;x+=8)for(let z=cz*32;z<cz*32+32;z+=8){if(roadAt(x,z)!=='city')continue;const crossing=x%48===0&&z%48===0;const p=put(crossing?'Road_A_7':'Road_A_1',x,z,1,z%48===0?Math.PI/2:0,false);if(p)p.y-=.19;}
+ const b=CITY_BOUNDS;
+ // Only blocks touching this sector are evaluated; no full-world scan is needed for streaming or collision.
+ for(let bx=Math.max(b.left,Math.floor((cx*32-48)/48)*48);bx<=Math.min(b.right-48,Math.floor((cx*32+32)/48)*48);bx+=48)
+ for(let bz=Math.max(b.top,Math.floor((cz*32-48)/48)*48);bz<=Math.min(b.bottom-48,Math.floor((cz*32+32)/48)*48);bz+=48){
+  const kind=blockKind(bx,bz),h=hash(bx,bz,22);
+  if(kind==='plaza'||kind==='market'){
+   for(const dx of [12,24,36])building(blocks[(dx/12+Math.floor(h*10))%blocks.length],bx+dx,bz+11,0,10,12);
+   if(kind==='plaza'){
+    for(const [dx,dz] of [[10,38],[38,38],[24,40],[9,9],[39,9]]){put('FlowerPlace_6_A',bx+dx,bz+dz,1);put('Tree_A_1',bx+dx,bz+dz,1.7);}
+    for(const dx of [14,34]){put('Bench_1_A',bx+dx,bz+32,1,dx<24?Math.PI/2:-Math.PI/2);garden(bx+dx,bz+38,Math.PI/2);garden(bx+dx,bz+19,Math.PI/2);}
+    for(const dz of [22,27]){put('Table_1_A',bx+15,bz+dz,1,0,false);for(const dx of [13.5,16.5])put('Chair_1_A',bx+dx,bz+dz,1,dx<15?Math.PI/2:-Math.PI/2);}
+    for(const dx of [6,42])for(const dz of [18,30,40])garden(bx+dx,bz+dz);for(const dx of [18,30]){garden(bx+dx,bz+34);garden(bx+dx,bz+42,Math.PI/2);}
+   }else{for(const dx of [12,24,36])garden(bx+dx,bz+42,Math.PI/2);}
+  }else if(kind==='park'||kind==='court'){
+   if(kind==='court'){put('Basketball_Court_1',bx+24,bz+24,1.65,0,false);for(const dz of [10,38])put('Basketball_Stand_A',bx+24,bz+dz,1,dz===10?0:Math.PI);}
+   for(const dx of [10,38])for(const dz of [10,24,38]){put('Tree_B_1',bx+dx,bz+dz,1.8);put('Bush_1_A_1',bx+dx+2,bz+dz,1,0,false,true);}
+   for(const dz of [16,32])put('Bench_1_A',bx+7,bz+dz,1,Math.PI/2);
+  }else if(kind==='towers'&&h>.35){building('Building_7_1_A',bx+24,bz+24,0,29,29);for(const dx of [9,39])for(const dz of [12,36])put('FlowerPlacet_5_1_A',bx+dx,bz+dz,1,Math.PI/2);}
+  else{
+   for(const dz of [12,36])for(const dx of [12,24,36]){const ids=kind==='residential'?['Building_1_1_A','Building_12_A','Building_10_A']:blocks,id=ids[Math.floor(hash(bx+dx,bz+dz,82)*ids.length)];building(id,bx+dx,bz+dz,dz===12?Math.PI:0,10.6,11.2);}
+   for(const dx of [12,36])building(blocks[Math.floor(hash(bx+dx,bz,92)*blocks.length)],bx+dx,bz+24,dx===12?-Math.PI/2:Math.PI/2,10.5,10);
+   put('Pallet_1_1',bx+21,bz+24,1,0,true,true);put('Trashbin_1_A',bx+27,bz+24,1,0,true,true);
+  }
+  // Every street has a continuous furnished edge, with free pedestrian corridors.
+  for(const d of [10,24,38]){put('StreetLamp_3_A',bx+5.5,bz+d,1);put('StreetLamp_3_A',bx+d,bz+5.5,1);}
+  for(const d of [17,33]){put('FlowerPlace_6_A',bx+6,bz+d,.7,0,false);put('Tree_A_1',bx+6,bz+d,1.2);put('Trashbin_1_A',bx+d,bz+5.5,1,0,true,true);garden(bx+d,bz+6,Math.PI/2);}
+  put(['Car_1_A','Car_5_A','Car_7_A','Taxi_1','PostCar_1_A'][Math.floor(h*5)],bx+2.6,bz+24,1,0);
+  if(h>.55)put('BusStop_A',bx+31,bz+5.8,1);
+  for(let d=6;d<=42;d+=2){put('StreetTile_1_A_1',bx+d,bz+5,1,0,false,true);put('StreetTile_1_A_1',bx+5,bz+d,1,0,false,true);}
  }
- // Authored road modules retain the pack's lane markings and kerbs.
- for(let x=cx*32;x<cx*32+32;x+=8)for(let z=cz*32;z<cz*32+32;z+=8){
-  if(roadAt(x,z)!=='city')continue;
-  const crossing=Math.abs((x+248)%40)<.1&&Math.abs((z+192)%40)<.1;
-  const p=put(crossing?'Road_A_7':'Road_A_1',x,z,1,Math.abs((z+192)%40)<.1?Math.PI/2:0,false);if(p)p.y-=.2;
+ // Farmland and orchard rows make the property part of a working landscape.
+ for(let x=Math.floor(cx*32/10)*10;x<cx*32+32;x+=10)for(let z=Math.floor(cz*32/10)*10;z<cz*32+32;z+=10){if(fields(x,z)){put('SM_Field_1_4_A',x,z,1.2,0,false);for(const dx of [-2,0,2])for(const dz of [-2,0,2]){const id=z%30===0?'SM_CornPlant':'SM_Plant_Wheat';put(id,x+dx,z+dz,1.15/ASSETS[id].size[1],0,false,true);}}}
+ if(cz*32>220&&cx*32<-300)for(let x=cx*32+6;x<cx*32+32;x+=12)for(let z=cz*32+6;z<cz*32+32;z+=12)if(!roadAt(x,z))put('Tree_7_AA',x,z,1.05);
+ for(let x=-122;x<=-74;x+=2.1)for(const z of [172,212])if(Math.abs(x+96)>3)put('WallFence_1_1_A',x,z,1);
+ for(let z=172;z<212;z+=2.1)for(const x of [-122,-74])put('WallFence_1_1_A',x,z,1,Math.PI/2);
+ // Rock cavern: vaulted pieces follow the new mountain contour, keeping the corridor open.
+ for(const x of [465,475,485]){for(const z of [-357,-343])put('EA01_Env_Clif_01a',x,z,.65,Math.PI/2);const roof=put('EA01_Env_Clif_01b',x,-350,.8,0,false);if(roof){roof.y+=6.5;roof.sy=.12;roof.sx=.8;roof.sz=.8;}}
+ const region=biomeAt(cx*32+16,cz*32+16),natural=region.id!=='downtown';
+ const trees=['forest','wild'].includes(region.id)?24:['farm','suburb'].includes(region.id)?7:region.id==='lake'?8:4;
+ if(natural)for(let i=0;i<trees;i++){
+  const x=cx*32+hash(cx,cz,i*7+1)*32,z=cz*32+hash(cx,cz,i*7+2)*32;if(reserve(x,z)||height(x,z)<.05||inCity(x,z)||models.some(p=>!p.detail&&Math.hypot(x-p.x,z-p.z)<3.2))continue;
+  const id=region.id==='wild'||i%4===0?'EA01_Env_Tree_01c_PRE':['Tree_7_AA','Tree_8_AA','Tree_9_AA'][i%3];put(id,x,z,.9+hash(cx,cz,i+500)*.7,hash(cx,cz,i+900)*6.28);
  }
- // Original street grid; every block has a 12 metre public corridor.
- for(let bx=-248;bx<-88;bx+=40)for(let bz=-192;bz<48;bz+=40){
-  const block=hash(bx,bz);if(block<.13){for(const dx of [11,28])for(const dz of [11,28])put('Tree_10_AA',bx+dx,bz+dz,1.3);put('Bench_1_A',bx+12,bz+17,1);continue;}
-  if(block>.86){put('Building_7_1_A',bx+20,bz+20,.67);continue;}
-  for(const dx of [12,28])for(const dz of [13,28]){const id=buildings[Math.floor(hash(bx+dx,bz+dz)*buildings.length)],meta=ASSETS[id],s=Math.min(1.15,12/Math.max(meta.size[0],meta.size[2]));put(id,bx+dx,bz+dz,s,dz===13?Math.PI:0);}
+ if(natural)for(let i=0;i<180;i++){
+  const x=cx*32+hash(cx,cz,i*13+401)*32,z=cz*32+hash(cx,cz,i*13+402)*32;if(reserve(x,z)||height(x,z)<0||inCity(x,z))continue;
+  const id=i%9===0?'EA_M_Env_Flower_01a_PRE':i%13===0?'EA_M_Env_Flower_01b_PRE':i%7===0?'EA_M_Env_Bush_LeafClusterLarge_01ax_PRE':i%5===0?'EA_M_Env_Dry_Grass_01a_PRE':'EA_M_Env_Grass_01a_PRE';put(id,x,z,(id==='EA_M_Env_Grass_01a_PRE'?.3:.7)+hash(cx,cz,i+87)*.5,hash(cx,cz,i+91)*6.28,false,true);
  }
- // Sidewalk furniture and parked vehicles occupy designated kerb strips.
- for(let x=-248;x<=-88;x+=40)for(let z=-192;z<=48;z+=20){put('StreetLamp_3_A',x+5.3,z+5.3,1);put(['Car_1_A','Car_5_A','Car_7_A'][Math.floor(hash(x,z)*3)],x+2.8,z+12,1,Math.PI/2);}
- for(let x=-248;x<=-88;x+=40)for(let z=-192;z<48;z+=40){put('BushPot_1_A',x+6.5,z+18,1,Math.PI/2);put('Bench_1_A',x+6.5,z+10,1);}
- // Residential streets gradually give way to larger gardens.
- for(let x=-72;x<=-22;x+=24)for(let z=-78;z<-45;z+=22){if(FIXED.some(p=>Math.hypot(p.x-x,p.z-z)<15))continue;put('Building_12_A',x,z,.9);put('Tree_10_AA',x+8,z+5,1.2);}
- const region=biomeAt(cx*32+16,cz*32+16),density=region.id==='forest'||region.id==='wild'?23:region.id==='farm'?5:region.id==='suburb'?3:region.id==='mountain'?4:0;
- for(let i=0;i<density;i++){
-  const x=cx*32+2+hash(cx,cz,i*11+1)*28,z=cz*32+2+hash(cx,cz,i*11+2)*28;
-  if(reserved(x,z)||height(x,z)<0||models.some(p=>Math.hypot(p.x-x,p.z-z)<7)||FIXED.some(p=>Math.hypot(p.x-x,p.z-z)<12))continue;
-  const wild=region.id==='wild',id=(region.id==='forest'&&i%5===0)||wild?'EA01_Env_Tree_01c_PRE':['Tree_10_AA','Tree_9_AA','Tree_8_AA'][i%3];
-  put(id,x,z,.85+hash(cx,cz,i+55)*.55,hash(cx,cz,i+99)*6.28);
-  if(i%3===0)put('EA_M_Env_Grass_01a_PRE',x+1,z+1,.7,0,false);
- }
- if(['quarry','mountain','cave'].includes(region.id))for(let i=0;i<7;i++){
-  const x=cx*32+hash(cx,cz,i+181)*32,z=cz*32+hash(cx,cz,i+219)*32;
-  if(reserved(x,z))continue;put(i<2?'EA01_Env_Clif_01a':'EA01_Env_Rock_01b',x,z,i<2?1:.5,hash(cx,cz,i+303)*6.28);
- }
- // Resource locations are seeded, stable across chunk unloads and restricted by ecology.
- for(let i=0;i<3;i++){
-  const x=cx*32+4+hash(cx,cz,i+801)*24,z=cz*32+4+hash(cx,cz,i+901)*24,biome=biomeAt(x,z);
-  if(reserved(x,z)||height(x,z)<0||colliders.some(c=>c.kind==='rect'?Math.abs(x-c.x)<c.w/2+2&&Math.abs(z-c.z)<c.d/2+2:Math.hypot(x-c.x,z-c.z)<c.r+2))continue;
-  const type=biome.resources[i%biome.resources.length];resources.push({id:`ow:${key}:${i}`,type,x,z,model:type==='scrap'?'Box_1':type==='wood'?'TreeTrunk_1_1_A':type==='fiber'?'EA_M_Env_Bush_BerryDome_01a_PRE':'EA01_Env_Rock_01c'});
- }
- for(const [i,x,z] of [[0,193,-118],[1,204,-118],[2,214,-122]])if(chunkKey(x,z)===key)resources.push({id:`ow:cave-crystal:${i}`,type:'crystal',x,z,model:'EA01_Env_Rock_01c'});
- const result={models,colliders,resources};layouts.set(key,result);return result;
+ if(['quarry','mountain','cave','lake','wild'].includes(region.id))for(let i=0;i<12;i++){const x=cx*32+hash(cx,cz,i+181)*32,z=cz*32+hash(cx,cz,i+219)*32;if(reserve(x,z)||height(x,z)<0)continue;put(i<2?'EA01_Env_Clif_01a':'EA01_Env_Rock_01b',x,z,i<2?.8+hash(cx,cz,i)*.7:.2+hash(cx,cz,i)*.45,hash(cx,cz,i+303)*6.28,i<5,i>=5);}
+ for(let i=0;i<4;i++){const x=cx*32+4+hash(cx,cz,i+801)*24,z=cz*32+4+hash(cx,cz,i+901)*24,bio=biomeAt(x,z);if(reserve(x,z)||height(x,z)<0)continue;const type=bio.resources[i%bio.resources.length];resources.push({id:`v2:${key}:${i}`,type,x,z,model:type==='scrap'?'Box_1':type==='wood'?'TreeTrunk_1_1_A':type==='fiber'?'EA_M_Env_Bush_BerryDome_01a_PRE':'EA01_Env_Rock_01c'});}
+ for(const [i,x,z] of [[0,466,-349],[1,476,-349],[2,485,-351]])if(chunkKey(x,z)===key)resources.push({id:`v2:cave:${i}`,type:'crystal',x,z,model:'EA01_Env_Rock_01c'});
+ const result={models,colliders,resources};layouts.set(key,result);if(layouts.size>512)layouts.delete(layouts.keys().next().value);return result;
 }
-export function staticCollision(x,z,r=.4){
- for(let cx=Math.floor((x-20)/32);cx<=Math.floor((x+20)/32);cx++)for(let cz=Math.floor((z-20)/32);cz<=Math.floor((z+20)/32);cz++){
-  for(const c of sectorLayout(cx,cz).colliders){if(c.kind==='rect'?(Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r):Math.hypot(x-c.x,z-c.z)<c.r+r)return true;}
- }return false;
-}
-// Cross-sector footprints matter: a building can extend beyond its owning sector.
+export function staticCollision(x,z,r=.4,cameraY=null){for(let cx=Math.floor((x-28)/32);cx<=Math.floor((x+28)/32);cx++)for(let cz=Math.floor((z-28)/32);cz<=Math.floor((z+28)/32);cz++)for(const c of sectorLayout(cx,cz).colliders)if((cameraY===null||(cameraY>c.y-.2&&cameraY<c.y+c.height+.1))&&(c.kind==='rect'?(Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r):Math.hypot(x-c.x,z-c.z)<c.r+r))return true;return false;}
 export function resourceLocations(cx,cz){return sectorLayout(cx,cz).resources.filter(r=>!staticCollision(r.x,r.z,.8));}
-
-
-

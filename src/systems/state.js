@@ -1,6 +1,8 @@
+import {PLAN} from '../world/plan.js';
 import { CROPS, stationAvailable, footprint, spaceOf, BAG_SLOTS, canStore, addToContainer, syncSlotLayout, storageCapacity } from "./homestead.js";
 import { species, QUESTS, ITEMS } from "./data.js";
-export const SAVE_KEY = "ambrelune.save.v1";
+export const SAVE_KEY = "noverive.save.v2";
+try { localStorage.removeItem("ambrelune.save.v1");localStorage.removeItem("ambrelune.save.v1.backup"); } catch {}
 export function makeCreature(id, level = 3) {
   const c = species(id);
   return {
@@ -27,13 +29,13 @@ export function newState(starter = "velune", name = "Élo", color = "#657d95") {
     fence: 2,
   };
   return {
-    version: 1,
+    version: 2,
     location: "world",
     selectedSeed: "seed",
     name: name.slice(0, 24),
     color,
-    player: { x: -9, z: 8 },
-    time: 8,
+    player: { ...PLAN.spawn },
+    time: 10,
     day: 1,
     weather: "soleil",
     coins: 120,
@@ -48,14 +50,14 @@ export function newState(starter = "velune", name = "Élo", color = "#657d95") {
     friendship: {},
     discovered: ["city"],
     quest: 0,
-    settings: { quality: "low", pixel: false, sound: true, touch: false },
+    settings: { quality: typeof matchMedia!=="undefined"&&matchMedia("(pointer:coarse)").matches?"low":"medium", pixel: false, sound: true, touch: false },
     playtime: 0,
   };
 }
 export function normalizeSave(raw) {
   if (
     !raw ||
-    raw.version !== 1 ||
+    raw.version !== 2 ||
     !Array.isArray(raw.team) ||
     !raw.team.length ||
     !raw.player ||
@@ -299,7 +301,7 @@ export function canPlace(s, x, z, collides, type='lamp', rotation=0, ignore=-1) 
  const location=s.location||'world', y=s.player.y||0, [w,d]=footprint(type,rotation);
  if(!Number.isFinite(x)||!Number.isFinite(z)) return false;
  // The indoor limits are the visible inner faces of the plaster walls: furniture may touch them exactly.
- if(location==='world' ? !(x-w/2>-44 && x+w/2<-15 && z-d/2>19 && z+d/2<42) : !(Math.abs(x)+w/2<=8.8750001 && Math.abs(z)+d/2<=7.8750001)) return false;
+ if(location==='world' ? !(x-w/2>PLAN.farm.left && x+w/2<PLAN.farm.right && z-d/2>PLAN.farm.top && z+d/2<PLAN.farm.bottom) : !(Math.abs(x)+w/2<=8.8750001 && Math.abs(z)+d/2<=7.8750001)) return false;
  // Keep the front door and the entire stair route clear, on both storeys.
  if(location!=='world' && ((Math.abs(x)<2 && z+d/2>5) || (x+w/2>5 && z-d/2<4))) return false;
  // Indoors the footprint itself already represents the object edge, so adding a probe radius would recreate a visible gap.

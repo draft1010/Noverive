@@ -1,65 +1,35 @@
-# Noverive — refonte d’Ambrelune
-
-Version locale du 9 octobre 2026. Le projet modifié se trouve dans `C:\Users\cramo\Desktop\ambrelune`.
+# Noverive — refonte visuelle 0.5
 
 ## Jouer
 
-Lancer `Lancer-Noverive.cmd`, puis utiliser le navigateur ouvert sur `http://localhost:4173`. Le lanceur utilise Node installé sur cet ordinateur. Conserver sa fenêtre ouverte pendant la partie. Le jeu fonctionne aussi avec un serveur HTTP statique ; ouvrir directement index.html en fichier local ne suffit pas.
+Dans `C:\Users\cramo\Desktop\ambrelune`, ouvrir `Lancer-Noverive.cmd`. Le raccourci `Jouer-Noverive-v2.cmd` fourni dans les livrables ouvre directement cette version. Pour transporter le jeu, extraire `Noverive-Refonte-v2.zip` puis ouvrir `Lancer-Noverive.cmd` depuis le dossier extrait. Node.js doit être disponible ; le lanceur reconnaît aussi le runtime local déjà installé sur ce PC.
 
-Les sauvegardes restent dans le navigateur et sur l’adresse habituelle. La clé historique `ambrelune.save.v1` est volontairement conservée. Ne pas changer de navigateur ou de port pour retrouver automatiquement une ancienne partie. Le carnet, rubrique Réglages, permet d’exporter et d’importer une sauvegarde.
+Les anciennes sauvegardes Ambrelune v1 et leur copie locale sont supprimées au chargement du jeu dans le navigateur concerné. La nouvelle progression utilise `noverive.save.v2`. Une sauvegarde de l'ancien projet et l'historique Git restent disponibles sur le PC.
 
-PC : ZQSD/WASD/flèches pour marcher, Maj pour courir, E pour interagir, molette pour le zoom, clic droit pour orienter la caméra, Tab pour le carnet, M pour la carte. Sur mobile, jouer en paysage avec le joystick et les boutons tactiles. Commencer avec la qualité Basse.
+## Ce qui a été reconstruit
 
-## Monde livré
+Le monde mesure 2 048 × 2 048 mètres. La métropole occupe 768 × 672 mètres, organisée en îlots de 48 mètres et rues de 8 mètres. Le placement déterministe comprend 1 267 bâtiments, des quartiers résidentiels, commerces, tours, parcs, terrains de basket et halles. Les bâtiments et leur orientation sont adaptés aux rues ; deux familles du pack nécessitaient une correction de leur axe vertical.
 
-Le terrain mesure 640 × 640 mètres, contre environ 132 × 125 auparavant. Il comporte neuf régions : centre des Horizons, quartier des Jardins, plaine des Vergers, forêt des Murmures, lac des Reflets, carrière des Roches Claires, crêtes du Levant, grotte de Résonance et réserve des Lointains.
+La place d'arrivée est entièrement réaménagée : café à auvents, nouvelle fontaine avec jets animés, terrasse, bancs, arbres et jardinières remplies. Les pavés sont des matériaux continus à échelle réelle. Le domaine agricole, la forêt, le lac, la carrière, les crêtes, la grotte et la réserve remplacent l'ancienne carte. Le monde contient 11 415 emplacements de ressources accessibles. Les plantations, petites fleurs, buissons, cultures et accessoires sont chargés autour du joueur.
 
-Le plan contient 98 bâtiments et 2 797 placements de modèles. Les rues utilisent les modèles de chaussées, intersections, véhicules et mobilier du pack City. Les quartiers comprennent des habitants animés, commerçants, parc, marché, ressources de récupération et créatures urbaines. Les véhicules sont stationnés. Les bâtiments visitables sont la maison du joueur, le Café des Sources, la Maison des Jardins et la Maison des Explorateurs.
+Le personnage, les variantes de PNJ, les outils, la canne, les maisons et leurs sols, fenêtres, escaliers, cuisine et mobilier ont été renouvelés. L'interface utilise une présentation claire et contemporaine. L'atlas représente la nouvelle géographie. Les monstres conservent leurs modèles et animations ; les systèmes de combat, capture, culture, fabrication, rangement et progression restent jouables.
 
-La ferme conserve ses parcelles jouables et reçoit maison, grange, silo, serre, tracteur et cultures environnantes. La maison conserve ses deux niveaux, son escalier et le placement du mobilier. Lits, tables, chaises, armoires, étagères, fours et canapé utilisent les modèles sélectionnés. Le canapé se fabrique ou s’achète.
+Le catalogue regroupe les archives locales Cartoon City, Characters, Farm, Low Poly Nature, NatureForge, Stylized Rocks, Analog Memory, Restaurant et Medieval (outils génériques). Le monde extérieur utilise 71 références de décor, auxquelles s'ajoutent personnages, mobilier, outils et cultures. Les ponts sont une nouvelle construction géométrique ; le modèle Roadside Tales reste disponible dans le catalogue mais n'est pas utilisé dans cette version. Aucun téléchargement depuis le lien privé itch.io n'a été nécessaire.
 
-Les 16 espèces existantes, combats, captures, inventaire, coffres, cultures, fabrication et progression principale sont conservés. Les rencontres sont distribuées par habitat et niveau régional. 767 emplacements de ressources accessibles sont répartis selon leur environnement. Le lac propose la pêche. Cinq expéditions ajoutent découverte, collecte et récompenses uniques ; les débris urbains se recyclent en métal. Les futurs usages élémentaires des compagnons disposent d’une table de correspondance ; les nouvelles capacités de terrain ne sont pas encore un système jouable.
+## Vérification
 
-Le joueur et les PNJ portent désormais des tenues contemporaines. Le joueur conserve les outils attachés à sa main, les déplacements animés et les gestes de travail. Le nom Noverive, le logo, les icônes et l’écran d’accueil remplacent l’identité précédente.
+- 34 tests automatiques réussis : sauvegardes, navigation, collisions, parcelle, cultures, fabrication, habitats, ressources, dépendances des modèles, combats et captures.
+- Scénarios navigateur réussis : menus, entrer/sortir, placement et déplacement de meubles, annulation, coffre, repos, reprise à l'étage, montée et descente de l'escalier.
+- Combat et 18 effets d'attaque, retour au monde sans erreur JavaScript.
+- Pêche complète, annulation, échec anticipé, récompense unique et quatre outils équipés/animés.
+- Deux parcours de huit régions en qualité moyenne puis basse : tous les secteurs demandés chargés, aucune erreur de modèle. Le rapport basse qualité est joint aux livrables.
+- Interface mobile paysage vérifiée à 844 × 390, sans débordement horizontal ; inventaire compact et bouton de fermeture accessible. Pas d'essai sur un Galaxy S22 physique.
+- 347 entrées du cache hors ligne contrôlées sur disque. Les bibliothèques et modèles sont locaux ; le fonctionnement réseau coupé n'a pas été simulé.
 
-## Assets
+Les secteurs de 32 mètres se chargent par deux, les secteurs éloignés se libèrent, le cache des dispositions est limité à 512 secteurs et les modèles inutilisés sont évincés. Le mode bas limite la portée à 72 mètres et les détails proches ; moyenne 104 mètres, haute 136 mètres. La mesure sur ce PC ne vaut pas validation sur téléphone.
 
-Les neuf familles demandées ont été exploitées à partir des archives locales. Aucun téléchargement depuis le lien privé itch.io n’a été nécessaire.
+## Portée
 
-| Pack | Utilisation |
-|---|---|
-| Cartoon City Massive Pack | Bâtiments, routes, mobilier urbain, voitures, kiosques |
-| Analog Memory 80/90 | Lit, armoire et décoration intérieure |
-| Kitchen / Restaurant | Tables, chaises, canapé, cuisine et café |
-| NatureForge | Arbres, buissons et végétation |
-| Nature Megapack | Variété d’arbres et sous-bois |
-| Farmland | Maison rurale, bâtiments agricoles, tracteur et champs |
-| Stylized Rock Pack | Rochers, reliefs et galerie de la grotte |
-| Roadside Tales — Backroad Bridges | Structures sous les deux tabliers de pont adaptés au terrain |
-| Medieval Megapack | Hache et marteau génériques sur l’atelier, sans architecture médiévale |
+Cette livraison est une refonte jouable du jeu existant, avec une nouvelle composition et des décors beaucoup plus denses. Elle ne constitue pas une production AAA de studio ni une reproduction exacte de la vidéo promotionnelle : pas de circulation automobile simulée à l'échelle de toute la ville, ni d'intérieur unique pour chacun des 1 267 bâtiments. Les scènes de combat utilisent une nouvelle clairière commune. Les futurs pouvoirs de terrain des compagnons ne sont pas un nouveau système jouable.
 
-`assets/openworld/manifest.json` indique les fichiers et archives d’origine, dépendances, dimensions et nombres de triangles. Les textures externes ont été relocalisées pour fonctionner en local. Les droits des packs restent ceux de leurs licences d’origine.
-
-## Optimisation
-
-Le monde est découpé en secteurs de 32 mètres. Deux chargements simultanés au maximum, distances adaptées à la qualité, déchargement des secteurs éloignés, géométries instanciées et cache de modèles à références évitent de charger tout le monde. Le rayon bas est de 72 mètres, avec une marge de déchargement pour éviter les rechargements incessants. Les modèles proches conservent leur géométrie. Les PNJ et créatures éloignés réduisent leur simulation et leur affichage. Les bibliothèques de chargement sont locales.
-
-## Vérifications réalisées
-
-- 33 tests automatisés réussis : sauvegardes, stockage, fabrication, cultures, combat, placement, escaliers, navigation, ressources, habitats, dépendances et expéditions.
-- Scénarios dans le navigateur : nouvelle partie, transitions des menus, entrer/sortir, déplacer et annuler du mobilier, coffres et repos, reprise à l’étage, déplacement dans l’escalier, combat et 18 attaques.
-- Pêche complète, échec anticipé, annulation, absence de récompense doublée et outils équipés avec le nouveau personnage.
-- Perte puis restauration simulée du contexte graphique : partie conservée.
-- Deux passages sur huit destinations éloignées : chargements terminés et aucune erreur JS ou de modèle signalée. Les relevés bruts sont fournis séparément. Ce sont des mesures ponctuelles sur PC, avec plusieurs vues de test, pas un benchmark de téléphone.
-- Affichage 844 × 390 : panneau du carnet dans l’écran, pas de débordement horizontal de la page. Affichage 390 × 844 : invitation à tourner le téléphone.
-- 223 entrées du cache hors ligne vérifiées présentes sur disque. Le fonctionnement sans réseau après installation n’a pas été testé sur téléphone.
-
-La validation sur un Samsung S22 physique reste à faire, notamment température, autonomie, mémoire sur longue session et fluidité tactile. La carte comporte des intérieurs sélectionnés, une galerie rocheuse accessible et des activités jouables ; elle ne propose pas un intérieur unique pour chacun des 98 bâtiments.
-
-Pour reproduire les vérifications, exécuter `node --test tests/*.test.mjs`. Pour les scénarios navigateur, démarrer `server.mjs` avec la variable d’environnement `PORT=4186`, puis ouvrir `/qa/gameplay.html`, attendre la fin du chargement et utiliser les boutons QA. Cette page crée des parties de test sur cette adresse. Le parcours de régions est disponible sur `http://localhost:4186/?qa=1`.
-
-## Sauvegarde du travail
-
-Copie intégrale avant modification : `C:\Users\cramo\Desktop\ambrelune-backup-20261009`. L’identité originale est également conservée dans `branding-original/`.
-
-Le dépôt Git local contient l’état initial et la refonte sur la branche `refonte-open-world`. Aucun dépôt distant ni publication n’a été créé. Les tests utilisent le port 4186 pour isoler leurs sauvegardes de la partie habituelle sur 4173.
+Les assets restent soumis aux licences de leurs auteurs. L'archive est destinée à votre usage avec les packs que vous possédez.

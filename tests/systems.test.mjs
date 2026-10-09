@@ -71,7 +71,7 @@ test("save roundtrip preserves buildings, crops and captured creatures", () => {
   assert.deepEqual(load(storage).buildings, s.buildings);
   s.day++;
   save(s, storage);
-  assert.ok(store.has("ambrelune.save.v1.backup"));
+  assert.ok(store.has("noverive.save.v2.backup"));
 });
 test("invalid and future saves are rejected without mutation", () => {
   assert.throws(() => normalizeSave({ version: 999 }));
@@ -136,9 +136,9 @@ test("capture improves with low health and status", () => {
 });
 test("building only allowed inside property away from crops and solids", () => {
   const s = newState();
-  s.plots = [{ x: -25, z: 29 }];
+  s.plots = [{ x: -103, z: 185 }];
   assert.equal(
-    canPlace(s, -25, 29, () => false),
+    canPlace(s, -103, 185, () => false),
     false,
   );
   assert.equal(
@@ -146,11 +146,11 @@ test("building only allowed inside property away from crops and solids", () => {
     false,
   );
   assert.equal(
-    canPlace(s, -20, 36, () => true),
+    canPlace(s, -85, 200, () => true),
     false,
   );
   assert.equal(
-    canPlace(s, -20, 36, () => false),
+    canPlace(s, -85, 200, () => false),
     true,
   );
 });

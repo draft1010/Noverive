@@ -9,7 +9,7 @@ export const modelErrors=[];
 export async function acquireModel(id){
  if(!ASSETS[id])throw Error(`Unknown model ${id}`);
  let entry=cache.get(id);
- if(!entry){entry={refs:0,used:performance.now()};cache.set(id,entry);entry.promise=loader.loadAsync(ASSETS[id].file).then(gltf=>{entry.root=gltf.scene;entry.root.updateMatrixWorld(true);prepareOccluders(entry.root);return entry.root;}).catch(e=>{cache.delete(id);modelErrors.push(`${id}: ${e.message}`);throw e;});}
+ if(!entry){entry={refs:0,used:performance.now()};cache.set(id,entry);entry.promise=loader.loadAsync(ASSETS[id].file).then(gltf=>{entry.root=gltf.scene;entry.root.rotation.x+=ASSETS[id].rotationX||0;entry.root.updateMatrixWorld(true);prepareOccluders(entry.root);return entry.root;}).catch(e=>{cache.delete(id);modelErrors.push(`${id}: ${e.message}`);throw e;});}
  entry.refs++;entry.used=performance.now();
  try{return await entry.promise;}catch(e){entry.refs--;throw e;}
 }

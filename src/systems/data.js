@@ -337,7 +337,7 @@ export const QUESTS = [
   },
   {
     title: "Le jardin des anciens",
-    text: "Retrouvez le Veilleur dans les ruines, au nord-est, au-delà du grand pont.",
+    text: "Retrouvez le Veilleur à la station de résonance, au nord-est, au-delà du grand pont.",
     test: (s) => s.flags.guardian,
   },
   {
@@ -356,18 +356,18 @@ export const TOOLS = [
   ["journal", "☷", "Carnet"],
 ];
 export const LANDMARKS = [
-  {id:"downtown",name:"Centre des Horizons",x:-168,z:-72},
-  {id:"lake",name:"Lac des Reflets",x:103,z:110},
-  {id:"mountain",name:"Crêtes du Levant",x:210,z:-190},
-  {id:"cave",name:"Grotte de Résonance",x:192,z:-120},
-  {id:"wild",name:"Réserve des Lointains",x:235,z:210},
-  { id: "city", name: "Place des Trois Sources", x: -9, z: 1 },
-  { id: "home", name: "Votre jardin", x: -29, z: 28 },
-  { id: "forest", name: "Bois des Murmures", x: 40, z: 14 },
-  { id: "ruins", name: "Arène de Résonance", x: 42, z: -38 },
-  { id: "market", name: "Marché des Sources", x: -30, z: -19 },
-  { id: "quarry", name: "Carrière des Roches Claires", x: 110, z: -80 },
-  { id: "heights", name: "Les Hauts-Vergers", x: -23, z: -48 },
+ {id:'downtown',name:'Métropole des Horizons',x:-240,z:-168},
+ {id:'lake',name:'Lac des Reflets',x:292,z:280},
+ {id:'mountain',name:'Massif du Levant',x:650,z:-550},
+ {id:'cave',name:'Grotte de Résonance',x:465,z:-350},
+ {id:'wild',name:'Réserve des Lointains',x:650,z:650},
+ {id:'city',name:'Place des Horizons',x:-24,z:24},
+ {id:'home',name:'Votre domaine',x:-96,z:185},
+ {id:'forest',name:'Forêt des Murmures',x:180,z:80},
+ {id:'ruins',name:'Station de Résonance',x:280,z:-140},
+ {id:'market',name:'Halles des Horizons',x:-72,z:24},
+ {id:'quarry',name:'Carrière des Roches Claires',x:260,z:-200},
+ {id:'heights',name:'Parc des Belvédères',x:-360,z:-120},
 ];
 export function species(id) {
   return SPECIES.find((c) => c.id === id) || SPECIES[0];

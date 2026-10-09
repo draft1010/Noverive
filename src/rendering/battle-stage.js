@@ -1,3 +1,4 @@
+import {battleEnvironment} from './battle-environment.js';
 import { getTerrainTextures } from './village.js';
 import { T, Factory, tree, flower, random, furnishing } from "./art.js";
 import { modelCreature } from "./monster-models.js";
@@ -50,10 +51,10 @@ function cloneVec(v) {
 export class BattleStage {
   constructor(ally, enemy) {
     this.scene = new T.Scene();
-    this.scene.background = new T.Color("#c8d8cf");
-    this.scene.fog = new T.Fog("#c8d8cf", 18, 65);
+    this.scene.background = new T.Color("#adcadd");
+    this.scene.fog = new T.Fog("#adcadd", 18, 65);
 
-    this.scene.add(new T.HemisphereLight("#fff4db", "#6c8d72", 1.6));
+    this.scene.add(new T.HemisphereLight("#fff4db", "#849377", 2.4));
 
     const sun = new T.DirectionalLight("#ffe4b1", 2.2);
     sun.position.set(-10, 20, 12);
@@ -75,65 +76,7 @@ export class BattleStage {
     fill.position.set(12, 8, -8);
     this.scene.add(fill);
 
-    const g = new T.Group();
-    const f = new Factory(g, true);
-    const r = random(991);
-
-    const terrain = new T.PlaneGeometry(150,150,36,36);terrain.rotateX(-Math.PI/2);
-    const pos=terrain.attributes.position,colors=[];
-    for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),dist=Math.hypot(x,z);pos.setY(i,dist<8?-.04:(Math.sin(x*.16)*Math.cos(z*.13)*1.3)*Math.min(1,(dist-8)/12)-.04);const c=new T.Color('#82986b');c.offsetHSL(0,0,Math.sin(x*.24+z*.17)*.04);colors.push(c.r,c.g,c.b);}
-    for(let i=0;i<terrain.attributes.uv.count;i++){terrain.attributes.uv.setXY(i,terrain.attributes.uv.getX(i)*50,terrain.attributes.uv.getY(i)*50);}
-    terrain.setAttribute('color',new T.Float32BufferAttribute(colors,3));terrain.computeVertexNormals();
-    const meadow=new T.Mesh(terrain,new T.MeshStandardMaterial({vertexColors:true,roughness:1,map:getTerrainTextures().grass}));meadow.receiveShadow=true;this.scene.add(meadow);this.meadow=meadow;
-    for (let i = 0; i < 210; i++) {
-      const a = r() * Math.PI * 2;
-      const rad = 8.5 + r() * 19;
-      const x = Math.sin(a) * rad;
-      const z = Math.cos(a) * rad;
-      flower(
-        f,
-        x,
-        0,
-        z,
-        ["#dcc4ab", "#d8b6c6", "#f0d18a", "#b5c7a1"][i % 4],
-        0.6 + r() * 0.45,
-      );
-      if (i % 7 === 0) {
-        f.part(
-          "sphere",
-          i % 2 ? "#87966b" : "#98a97c",
-          x,
-          0.18,
-          z,
-          0.6 + r() * 0.22,
-          0.28 + r() * 0.12,
-          0.58 + r() * 0.22,
-          0,
-          i * 0.2,
-        );
-      }
-    }
-
-    for (const [x, z, v, s] of [
-      [-17, -14, 0, 0.95],
-      [16, 14, 1, 0.92],
-      [-18, 13, 4, 1.05],
-      [18, -13, 2, 1.02],
-      [0, -19, 0, 0.85],
-      [0, 19, 1, 0.9],
-    ]) {
-      tree(f, x, 0, z, s, v);
-    }
-
-    // Irregular rocks and shrubs form the edge of a clearing, without an arena ring.
-    for(let i=0;i<28;i++) {
-      const x=(r()-.5)*48,z=-10-r()*19;
-      f.part('sphere',i%2?'#8a917d':'#98a97c',x,.2,z,.4+r()*1.2,.3+r()*.6,.5+r(),0,r()*3);
-    }
-
-    f.flush();
-    this.scene.add(g);
-    this.decor = g;
+    battleEnvironment(this);
 
     this.ally = modelCreature(species(ally.id), 1.65);
     this.enemy = modelCreature(species(enemy.id), 1.65);
@@ -837,7 +780,7 @@ case "graine":
   }
 
   dispose() {
-    this.meadow.geometry.dispose();this.meadow.material.dispose();
+    this.decor.userData.dispose?.();this.meadow.geometry.dispose();this.meadow.material.dispose();
     this.ring.geometry.dispose();
     this.ring.material.dispose();
     this.sun.shadow.map?.dispose();

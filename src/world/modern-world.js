@@ -1,38 +1,42 @@
-import {T,Factory,furnishing} from '../rendering/art.js';
-import {flowingFountain} from '../rendering/fountain.js';
+import {T} from '../rendering/art.js';
 import {WorldStreamer,terrainMesh} from './streaming.js';
-import {placeModel,acquireModel,instanceModel} from './model-library.js';
-import {height,bridgeHeight,terrainHeight} from './terrain.js';
+import {placeModel} from './model-library.js';
+import {height,bridgeHeight} from './terrain.js';
+import {PLAN,WORLD_SIZE} from './plan.js';
+import {modernCharacter} from '../rendering/modern-character.js';
 import {modelCreature} from '../rendering/monster-models.js';
 import {species} from '../systems/data.js';
 import {chooseEncounter} from '../systems/encounters.js';
 export function buildModernWorld(w){
- // Disable Three's unbounded raw-file cache; the model library owns its bounded cache.
  T.Cache.enabled=false;T.Cache.clear();
- const ground=terrainMesh(0,0,640,160);ground.position.y=-.045;w.scene.add(ground);w.ground=ground;w.pickSurfaces=[ground];
- const water=new T.Mesh(new T.PlaneGeometry(640,640),new T.MeshStandardMaterial({color:'#5dabb4',roughness:.22,metalness:.18,transparent:true,opacity:.86}));water.rotation.x=-Math.PI/2;water.position.y=-.48;water.material.uniforms={time:{value:0},sun:{value:1},lowQuality:{value:0}};water.material.userData.cutawayExcluded=true;w.water=water;w.scene.add(water);
- w.fountain=flowingFountain(w.scene,-9,height(-9,0),0);w.collider(-9,0,2.7);
- const civic=new T.Group(),f=new Factory(civic,true);w.scene.add(civic);w.landmarkGroup=civic;
- f.part('cylinder','#d4ded6',-9,height(-9,0)+.15,0,2.7,.3,2.7);
- // Concrete pedestrian bridge decks follow the walking surface exactly.
- for(const z of [8,-30]){
-  const geo=new T.PlaneGeometry(17,3.9,34,1);geo.rotateX(-Math.PI/2);const p=geo.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,bridgeHeight(p.getX(i)+19.5,z));geo.computeVertexNormals();const deck=new T.Mesh(geo,new T.MeshStandardMaterial({color:'#c9c7b8',roughness:.9}));deck.material.userData.cutawayExcluded=true;deck.position.set(19.5,0,z);deck.receiveShadow=true;w.scene.add(deck);w.pickSurfaces.push(deck);
-  for(const side of [-1,1]){for(let x=11;x<=28;x+=1){const y=bridgeHeight(x,z);f.part('box','#637d83',x,y+.55,z+side*1.9,.08,1.1,.08);f.part('box','#637d83',x,y+1.1,z+side*1.9,1.05,.08,.08);}w.collider(19.5,z+side*1.9,0,'rect',17,.18);}
- }
- // Keep the rural kit's stone supports underneath the precisely fitted walking decks.
- acquireModel('EA_Bridge_3x10_01b_PRE.prefab').then(root=>instanceModel(root,'EA_Bridge_3x10_01b_PRE.prefab',[8,-30].map(z=>({x:19.5,y:-3.3,z,r:Math.PI/2,sx:.85,sy:.7,sz:1.62})),civic)).catch(e=>console.warn('Supports de pont',e.message));
- for(let x=-44;x<=-16;x+=2){if(x>-29&&x<-23)continue;furnishing(f,'fence',x,height(x,42),42);w.collider(x,42,0,'rect',1.9,.3);}
- furnishing(f,'workbench',-40,height(-40,32),32);
- w.interactables.push({type:'expedition',name:'Consulter les expéditions',x:-9,z:-5},{type:'expedition',name:'Maison des Explorateurs · missions',x:-35,z:-43},{type:'home',name:'Votre maison · entrer',x:-36,z:28.3},{type:'workbench',name:'Atelier de la ferme',x:-40,z:32});
- w.interactables.push({type:'shop',name:'Marché des Horizons · acheter et vendre',x:-148,z:-48.5},{type:'expedition',name:'Kiosque des Horizons · expéditions',x:-144.5,z:-52});
- for(const [x,z,name] of [[-20,-1,'Café des Sources'],[1,-5,'Maison des Jardins'],[-35,-43,'Maison des Explorateurs']])w.interactables.push({type:'home',name:`${name} · entrer`,location:`house-${x}-${z}`,x,z});
- // Existing final encounter remains reachable at its original quest coordinates.
- f.part('cylinder','#c4d4cb',43,terrainHeight(43,-39)+.18,-39,5.5,.36,5.5);f.part('torus','#65b6ae',43,height(43,-39)+3,-43,2,2,2);
- f.flush();w.createParticles();w.populate();
- w.streamer=new WorldStreamer(w);w.streamer.update(1,-9,8,{settings:{quality:'low'},depleted:{},day:1});
+ const ground=terrainMesh(0,0,WORLD_SIZE,256);ground.position.y=-.075;w.scene.add(ground);w.ground=ground;w.pickSurfaces=[ground];
+ const waterMaterial=new T.MeshStandardMaterial({color:'#478f9b',roughness:.23,metalness:.28,transparent:true,opacity:.91});
+ waterMaterial.uniforms={time:{value:0},sun:{value:1},lowQuality:{value:0}};waterMaterial.userData.cutawayExcluded=true;
+ waterMaterial.onBeforeCompile=s=>{s.uniforms.uWaterTime=waterMaterial.uniforms.time;s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWater;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWater=(modelMatrix*vec4(position,1.)).xyz;');s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nuniform float uWaterTime; varying vec3 vWater;').replace('#include <color_fragment>','#include <color_fragment>\nfloat wave=sin(vWater.x*1.7+uWaterTime)*sin(vWater.z*1.2-uWaterTime*.7);diffuseColor.rgb*=.93+wave*.075;');};
+ const water=new T.Mesh(new T.PlaneGeometry(WORLD_SIZE,WORLD_SIZE),waterMaterial);water.rotation.x=-Math.PI/2;water.position.y=-.48;w.water=water;w.scene.add(water);
+ // Fine jets cascade between the actual fountain bowls.
+ const jetGeometry=new T.BufferGeometry(),jetPositions=new Float32Array(360*3);jetGeometry.setAttribute('position',new T.BufferAttribute(jetPositions,3));const jets=new T.Points(jetGeometry,new T.PointsMaterial({color:'#c3f2f4',size:.055,transparent:true,opacity:.78,depthWrite:false}));jets.frustumCulled=false;w.scene.add(jets);
+ w.fountain={update(t){jets.visible=Math.hypot(w.lastPlayerX+24,w.lastPlayerZ-28)<90;for(let i=0;i<360;i++){const stream=Math.floor(i/60),u=((i%60)/60+t*.65)%1,a=stream*Math.PI/3,r=.2+u*1.9;jetPositions[i*3]=-24+Math.cos(a)*r;jetPositions[i*3+1]=2.65+Math.sin(u*Math.PI)*.8-u*1.9;jetPositions[i*3+2]=28+Math.sin(a)*r;}jetGeometry.attributes.position.needsUpdate=true;}};
+ // Architectural bridge: thin concrete deck, steel posts and continuous handrail.
+ const bridgeGroup=new T.Group();w.scene.add(bridgeGroup);const steel=new T.MeshStandardMaterial({color:'#334c53',metalness:.65,roughness:.4}),concrete=new T.MeshStandardMaterial({color:'#c9c6b8',roughness:.88});
+ function bar(x,y,z,sx,sy,sz,mat){const m=new T.Mesh(new T.BoxGeometry(sx,sy,sz),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;bridgeGroup.add(m);return m;}
+ for(const z of [8,-30]){const geo=new T.PlaneGeometry(19,4.8,38,1);geo.rotateX(-Math.PI/2);const p=geo.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,bridgeHeight(p.getX(i)+19.5,z));geo.computeVertexNormals();const deck=new T.Mesh(geo,concrete);deck.position.x=19.5;deck.position.z=z;deck.receiveShadow=true;bridgeGroup.add(deck);w.pickSurfaces.push(deck);for(const side of [-1,1]){for(let x=10;x<=29;x+=1){const y=bridgeHeight(x,z);bar(x,y+.5,z+side*2.35,.045,1,.045,steel);bar(x,y+1.02,z+side*2.35,1.05,.055,.075,steel);}w.collider(19.5,z+side*2.35,0,'rect',19,.12);}for(const x of [12,27])bar(x,-.1,z,.6,1.5,4.2,concrete);}
+ w.interactables.push(
+  {type:'expedition',name:'Office des Horizons · expéditions',x:-32,z:34},
+  {type:'shop',name:'Halles des Horizons · acheter et vendre',x:-78,z:28},
+  {type:'home',name:'Votre maison · entrer',x:PLAN.door.x,z:PLAN.door.z},
+  {type:'workbench',name:'Atelier du domaine',x:PLAN.workshop.x,z:PLAN.workshop.z},
+  {type:'home',name:'Café des Horizons · entrer',location:'house--40-24',x:-34,z:24},
+  {type:'home',name:'Maison des Explorateurs · entrer',location:'house--8-24',x:-13,z:24}
+ );
+ w.createParticles();w.populate();w.streamer=new WorldStreamer(w);w.streamer.update(1,PLAN.spawn.x,PLAN.spawn.z,{settings:{quality:'low'},depleted:{},day:1});
+}
+export function populateModernPeople(w){
+ const people=[['Maëlle','Accueil des Horizons',-24,19],['Soline','Commerçante des Halles',-78,28],['Orin','Commerçant de semences',-62,32],['Ivo','Chercheur de résonance',-14,25],['Noé','Voisin des Vergers',-108,167],['Tess','Architecte du domaine',-114,178],['Ysée','Exploratrice',-12,30],['Alba','Voyageuse',-32,38]];
+ for(let i=0;i<32;i++){const x=-54-(i%8)*48,z=-18-Math.floor(i/8)*48;people.push([['Lina','Sam','Milo','Nora','Jules','Aya','Lou','Eden'][i%8]+` ${Math.floor(i/8)+1}`,i%7===0?'Commerçant des Horizons':'Habitant des Horizons',x,z]);}
+ people.forEach(([name,role,x,z],i)=>{if(w.collides(x,z,.4)){for(let k=1;k<12;k++)if(!w.collides(x+k*.5,z,.4)){x+=k*.5;break;}}const mesh=modernCharacter(i%8+1);mesh.position.set(x,height(x,z),z);w.scene.add(mesh);const route=[{x,z},{x,z:z+5},{x:x+3,z:z+5},{x,z}].filter(p=>!w.collides(p.x,p.z,.4));w.npcs.push({name,role,x,z,homeX:x,homeZ:z,mesh,phase:i,route});});
 }
 export function populateModernWild(w){
- for(let i=0;i<26;i++){const e=chooseEncounter(w.rand,w.collides.bind(w),w.wild,null,{x:-9,z:8});if(!e)continue;const mesh=modelCreature(species(e.id),1);mesh.position.set(e.x,height(e.x,e.z),e.z);w.scene.add(mesh);w.wild.push({...e,mesh,index:i,cooldown:0});}
- const mesh=modelCreature(species('gardien'),1);mesh.position.set(43,height(43,-38),-38);w.scene.add(mesh);w.wild.push({id:'gardien',x:43,z:-38,homeX:43,homeZ:-38,mesh,phase:0,cooldown:0,index:26,level:7});
+ for(let i=0;i<22;i++){const e=chooseEncounter(w.rand,w.collides.bind(w),w.wild,null,PLAN.spawn);if(!e)continue;const mesh=modelCreature(species(e.id),1);mesh.position.set(e.x,height(e.x,e.z),e.z);w.scene.add(mesh);w.wild.push({...e,mesh,index:i,cooldown:0});}
+ const {x,z}=PLAN.arena,mesh=modelCreature(species('gardien'),1);mesh.position.set(x,height(x,z),z);w.scene.add(mesh);w.wild.push({id:'gardien',x,z,homeX:x,homeZ:z,mesh,phase:0,cooldown:0,index:22,level:7});
 }
-

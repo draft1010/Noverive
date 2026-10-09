@@ -5,19 +5,23 @@ export class FishingSession {
   player.rotation.y=Math.atan2(x-player.position.x,z-player.position.z);
   this.landStart=new T.Vector3();this.landEnd=new T.Vector3();
   this.root=new T.Group();scene.add(this.root);const f=new Factory(this.root);
-  this.bobber=f.part('sphere','#ebbe74',x,-.2,z,.11,.15,.11);
-  this.rod=f.part('cylinder','#90734e',player.position.x,player.position.y+1.4,player.position.z,.025,2.2,.025,0,0,-.7);
-  this.rod.position.set(0,.95,.3);this.rod.rotation.set(.3,0,0);player.userData.arms[1].add(this.rod);
+  this.bobber=new T.Group();this.root.add(this.bobber);this.bobber.position.set(x,-.2,z);
+  const part=(parent,geometry,color,x,y,z)=>{const m=new T.Mesh(geometry,new T.MeshStandardMaterial({color,metalness:.35,roughness:.4}));m.position.set(x,y,z);parent.add(m);return m;};
+  part(this.bobber,new T.SphereGeometry(.07,12,8),'#e75f48',0,0,0);part(this.bobber,new T.CylinderGeometry(.022,.022,.2,8),'#f5f0de',0,.1,0);
+  this.rod=new T.Group();part(this.rod,new T.CylinderGeometry(.013,.022,1.8,10),'#24434d',0,.8,0);part(this.rod,new T.CylinderGeometry(.034,.034,.28,10),'#987658',0,-.16,0);const reel=part(this.rod,new T.CylinderGeometry(.072,.072,.07,12),'#bac6c6',.06,-.1,0);reel.rotation.z=Math.PI/2;
+  for(const y of [.35,.9,1.65])part(this.rod,new T.TorusGeometry(.035,.007,4,12),'#cad5d8',0,y,.03);
+  this.rod.position.set(0,0,.08);this.rod.rotation.set(.3,0,0);player.userData.arms[1].add(this.rod);
   this.tip=new T.Vector3();this.hiddenTool=player.getObjectByName('HeldTool');if(this.hiddenTool)this.hiddenTool.visible=false;
   player.userData.whenReady?.then(()=>{if(!this.finished)player.userData.arms[1].add(this.rod);}).catch(()=>{});
   this.line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(),new T.Vector3(),new T.Vector3()]),new T.LineBasicMaterial({color:'#ded3b4'}));this.root.add(this.line);
   this.catchMesh=new T.Group();const cf=new Factory(this.catchMesh);
-  cf.part('sphere','#d8a45d',0,0,0,.25,.11,.085);
-  cf.part('cone','#c28b48',-.27,0,0,.12,.18,.07,0,0,Math.PI/2);
+  cf.part('sphere','#64aeb5',0,0,0,.25,.11,.085);
+  cf.part('sphere','#d7e6de',0,-.03,.015,.22,.06,.079);
+  cf.part('cone','#367384',-.27,0,0,.12,.18,.07,0,0,Math.PI/2);
   cf.part('sphere','#263b35',.16,.03,.07,.018,.018,.018);
   this.catchMesh.visible=false;this.root.add(this.catchMesh);
   this.target=new T.Vector3(x,-.2,z);
-  this.panel=document.createElement('section');this.panel.className='fishing-panel';this.panel.innerHTML='<span class="eyebrow">SUR LES RIVES DE L’AMBRE</span><h2 id="fishPhase">Lancer la ligne…</h2><p id="fishHelp">Le flotteur rejoint l’eau.</p><div class="tension-track"><span></span><i id="fishNeedle"></i></div><progress id="fishProgress" max="1" value="0" aria-label="Poisson ramené"></progress><div class="card-actions"><button id="fishHold">Ferrer / ramener</button><button id="fishCancel">Ranger la canne</button></div>';
+  this.panel=document.createElement('section');this.panel.className='fishing-panel';this.panel.innerHTML='<span class="eyebrow">LES EAUX DE NOVERIVE</span><h2 id="fishPhase">Lancer la ligne…</h2><p id="fishHelp">Le flotteur rejoint l’eau.</p><div class="tension-track"><span></span><i id="fishNeedle"></i></div><progress id="fishProgress" max="1" value="0" aria-label="Poisson ramené"></progress><div class="card-actions"><button id="fishHold">Ferrer / ramener</button><button id="fishCancel">Ranger la canne</button></div>';
   document.body.append(this.panel);
   const button=this.panel.querySelector('#fishHold');
   button.onpointerdown=e=>{button.setPointerCapture(e.pointerId);this.press();};
@@ -35,7 +39,7 @@ export class FishingSession {
   const p=this.player.position, cast=this.phase==='cast'?Math.min(1,this.elapsed/.8):1;
   this.bobber.position.copy(p).lerp(this.target,cast);this.bobber.position.y+=Math.sin(cast*Math.PI)*2+Math.sin(time*4)*.025;
   if(this.phase==='bite')this.bobber.position.y-=.12+Math.sin(time*25)*.06;
-  this.rod.rotation.z=this.phase==='cast'?Math.sin(cast*Math.PI)*.7:Math.sin(time*2)*.03;this.rod.updateWorldMatrix(true,false);this.tip.set(0,.5,0).applyMatrix4(this.rod.matrixWorld);
+  this.rod.rotation.z=this.phase==='cast'?Math.sin(cast*Math.PI)*.7:Math.sin(time*2)*.03;this.rod.updateWorldMatrix(true,false);this.tip.set(0,1.7,0).applyMatrix4(this.rod.matrixWorld);
   let title='Lancer la ligne…',help='Le flotteur rejoint l’eau.';
   if(this.phase==='cast'&&this.elapsed>.8){this.phase='wait';this.elapsed=0;}
   if(this.phase==='wait'){title='Patience…';help='Attendez la touche avant de ferrer.';if(this.elapsed>this.wait){this.phase='bite';this.elapsed=0;}}
@@ -58,5 +62,5 @@ export class FishingSession {
   this.panel.querySelector('#fishPhase').textContent=title;this.panel.querySelector('#fishHelp').textContent=help;this.panel.querySelector('#fishNeedle').style.setProperty('--tension',(this.tension*97)+'%');this.panel.querySelector('#fishProgress').value=this.progress;
  }
  finish(success,message){if(this.finished)return;this.finished=true;this.dispose();this.onFinish(success,message);}
- dispose(){this.rod.removeFromParent();if(this.hiddenTool)this.hiddenTool.visible=true;this.root.removeFromParent();this.line.geometry.dispose();this.line.material.dispose();this.panel.remove();window.removeEventListener('keydown',this.keyDown);window.removeEventListener('keyup',this.keyUp);window.removeEventListener('blur',this.blur);}
+ dispose(){this.rod.removeFromParent();this.rod.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});this.bobber.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});if(this.hiddenTool)this.hiddenTool.visible=true;this.root.removeFromParent();this.line.geometry.dispose();this.line.material.dispose();this.panel.remove();window.removeEventListener('keydown',this.keyDown);window.removeEventListener('keyup',this.keyUp);window.removeEventListener('blur',this.blur);}
 }

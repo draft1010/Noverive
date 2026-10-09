@@ -1,3 +1,6 @@
+import {staticCollision} from './world/layout.js';
+import {equipment} from './rendering/equipment.js';
+import {PLAN,WORLD_SIZE} from './world/plan.js';
 import {EXPEDITIONS,expeditionReady,completeExpedition} from './systems/expeditions.js';
 import {disposeFurniture} from './rendering/modern-furniture.js';
 import {REGIONS,biomeAt,CITY_X,CITY_Z} from './world/regions.js';
@@ -186,13 +189,13 @@ function enterHome(location='home') {
  state.player={x:0,z:4.5,y:0};player.position.set(0,0,4.5);
  input.zoom=7;camera.fov=55;camera.updateProjectionMatrix();cameraTarget.set(0,1,4.5);camera.position.set(3,2.7,7.3);
  interior.sync(state);document.body.classList.add('indoors');persist();
- toast(location==='home'?'Bienvenue chez vous. L’escalier est à droite. Approchez de la porte pour sortir.':location==='house--20--1'?'Bienvenue au Café des Sources. Approchez de la porte pour sortir.':'Bienvenue. L’escalier est à droite ; la sortie est derrière vous.');
+ toast(location==='home'?'Bienvenue chez vous. L’escalier est à droite. Approchez de la porte pour sortir.':location==='house--40-24'?'Bienvenue au Café des Sources. Approchez de la porte pour sortir.':'Bienvenue. L’escalier est à droite ; la sortie est derrière vous.');
 }
 function leaveHome() {
  sceneTransition();
  cancelBuild();closeModal();scene.add(player);companion.visible=true;
  interior?.dispose();interior=null;state.location='world';
- state.player=state.outdoorPlayer||{x:-36,z:29};delete state.player.y;
+ state.player=state.outdoorPlayer||{...PLAN.door};delete state.player.y;
  input.zoom=21;camera.fov=38;camera.updateProjectionMatrix();input.target=null;input.route=[];
  cameraTarget.set(state.player.x,height(state.player.x,state.player.z)+1,state.player.z);
  player.position.set(state.player.x,height(state.player.x,state.player.z),state.player.z);
@@ -456,13 +459,21 @@ function persist(show = false) {
   }
 }
 function ensurePlots() {
+  if(!state.flags.homeStaged&&state.buildings.length===0){state.flags.homeStaged=true;state.buildings.push(
+    {type:'sofa',x:-5,z:3,y:0,r:Math.PI/2,location:'home'},
+    {type:'table',x:-1,z:0,y:0,r:0,location:'home'},
+    {type:'chair',x:-1,z:2,y:0,r:0,location:'home'},
+    {type:'chest',x:3,z:-5,y:0,r:0,location:'home',storage:{}},
+    {type:'sleepingBed',x:-5,z:-4,y:3.6,r:0,location:'home'},
+    {type:'wardrobe',x:-7,z:-6,y:3.6,r:0,location:'home',storage:{}}
+  );}
   if (!state.plots.length)
     for (let z = 0; z < 3; z++)
       for (let x = 0; x < 4; x++)
         state.plots.push({
           id: `plot${z * 4 + x}`,
-          x: -29 + x * 2.25,
-          z: 28 + z * 2.25,
+          x: PLAN.plots.x + x * 2.25,
+          z: PLAN.plots.z + z * 2.25,
           stage: 0,
           water: 0,
           growth: 0,
@@ -471,7 +482,7 @@ function ensurePlots() {
 function setupActors() {
   if (player) { player.removeFromParent();player.userData.dispose?.(); }
   if (companion) { companion.removeFromParent();companion.userData.dispose?.(); }
-  player = modernCharacter(4,true);
+  player = modernCharacter(9,true);player.rotation.y=Math.PI+.65+input.angle;
   currentScene().add(player);
   player.position.set(
     state.player.x,
@@ -497,13 +508,13 @@ async function requestGameFullscreen() {
 
 function begin(s) {
   requestGameFullscreen();
-  input.zoom = 21;
+  input.zoom = 17;
   fishingSession?.finish(false,"La ligne est rangée.");
   if(battle)endBattle("Fin de la rencontre.");
   if(interior)leaveHome();
   const resume=s.location && s.location!=="world" ? {location:s.location,player:{...s.player}} : null;
   state = s;
-  if(state.location!=="world"){state.player=state.outdoorPlayer||{x:-36,z:29};state.location="world";}
+  if(state.location!=="world"){state.player=state.outdoorPlayer||{...PLAN.door};state.location="world";}
   if(!resume && world.collides(state.player.x,state.player.z,.4)){
     const origin={...state.player};
     outer:for(let radius=.5;radius<14;radius+=.5)for(let i=0;i<24;i++){const x=origin.x+Math.cos(i*Math.PI/12)*radius,z=origin.z+Math.sin(i*Math.PI/12)*radius;if(!world.collides(x,z,.45)){state.player={x,z};break outer;}}
@@ -586,26 +597,7 @@ function selectTool(id) {
   updateHUD();
   audio.play();
 }
-function equipTool() {
-  if (heldTool) heldTool.removeFromParent();
-  heldTool = new T.Group();
-  heldTool.name = "HeldTool";
-  const f = new Factory(heldTool);
-  // Model the grip at the origin so the hand socket no longer grips empty space.
-  if(['axe','pick','hoe'].includes(tool)) {
-    heldTool.rotation.x=.3;
-    f.part('cylinder','#9b7b50',0,.12,0,.028,.85,.028,0,0,0,'wood');
-    if(tool==='axe')f.part('box','#9eaaa1',.12,.5,0,.3,.21,.065);
-    if(tool==='pick')f.part('box','#83978e',0,.5,0,.54,.085,.07,0,0,-.14);
-    if(tool==='hoe')f.part('box','#83978e',0,.49,.09,.24,.065,.25);
-  } else if(tool==='water') {
-    f.part('cylinder','#87a99b',0,-.25,0,.19,.28,.19);
-    f.part('torus','#b9c7a4',0,-.06,0,.13,.13,.13,0,Math.PI/2);
-    f.part('cylinder','#94b5aa',0,-.16,.29,.035,.36,.035,Math.PI/2-.3);
-    f.part('sphere','#b9c7a4',0,-.1,.46,.095,.065,.04);
-  }
-  player.userData.arms[1].add(heldTool);
-}
+function equipTool(){if(heldTool){heldTool.userData.dispose?.();heldTool.removeFromParent();}heldTool=equipment(tool);player.userData.arms[1].add(heldTool);}
 function renderToolbelt() {
   const belt = $("toolbelt");
   if (!belt) return;
@@ -776,7 +768,7 @@ function nearby() {
     z: p.z,
     distance: Math.abs(p.x - (riverX(p.z) - 6)),
   });
-  if(!interior){const angle=Math.atan2(p.z-110,(p.x-145)/1.2),x=145+Math.cos(angle)*43*1.2,z=110+Math.sin(angle)*43;list.push({type:'fish',name:'Pêcher au lac des Reflets',x,z,lake:true,distance:Math.hypot(x-p.x,z-p.z)});}
+  if(!interior){const angle=Math.atan2(p.z-280,(p.x-410)/1.25),x=410+Math.cos(angle)*94*1.25,z=280+Math.sin(angle)*94;list.push({type:'fish',name:'Pêcher au lac des Reflets',x,z,lake:true,distance:Math.hypot(x-p.x,z-p.z)});}
   list.sort((a, b) => a.distance - b.distance);
   return list.find((v) => v.distance < (v.type === "wild" ? 3.3 : 2.5));
 }
@@ -894,13 +886,13 @@ function dialogue(n) {
       "Le pollen endort, la brume soigne. Les éléments ont leurs affinités : l’eau apaise le feu, le feu domine la nature, et la nature absorbe l’eau.";
   } else if (n.name === "Ysée") {
     text =
-      "Le sanctuaire est plus au nord. Le Veilleur n’acceptera ton défi que si ton jardin possède une lumière et si tu as appris à tisser un lien.";
+      "La station de résonance est au nord-est. Le Veilleur n’acceptera ton défi que si ton jardin possède une lumière et si tu as appris à tisser un lien.";
   } else if (n.name === "Tess") {
     text =
       "Les clôtures se tournent avant de les poser. Avec le carnet, tu peux aussi récupérer tes constructions sans perdre les matériaux.";
   } else {
     text =
-      "Quand vient le soir, les Lumignons se montrent près des ruines. Sous la pluie, les Coralys remontent la rivière. Chaque promenade raconte autre chose.";
+      "Quand vient le soir, les Lumignons se montrent dans les parcs. Sous la pluie, les Coralys remontent la rivière. Chaque promenade raconte autre chose.";
   }
   if (state.flags["talkDay" + n.name] !== state.day) {
     state.friendship[n.name] = Math.min(5, met + 1);
@@ -922,7 +914,7 @@ function dialogue(n) {
 }
 function shop() {
   showModal(
-    `<span class="eyebrow">MARCHÉ DES TISSERANDS</span><h2>Un panier pour demain</h2><p>Votre bourse : ${state.coins} ambres</p><div class="rows">${[
+    `<span class="eyebrow">HALLES DES HORIZONS</span><h2>Un panier pour demain</h2><p>Votre bourse : ${state.coins} ambres</p><div class="rows">${[
       ["seed", 5],
       ["wheatSeed",7],["carrotSeed",6],["flaxSeed",8],["pumpkinSeed",10],
       ["seal", 18],
@@ -973,7 +965,7 @@ function shop() {
 }
 function home() {
   showModal(
-    `<span class="eyebrow">LA MAISON AUX VOLETS DE SAUGE</span><h2>Bienvenue chez vous, ${esc(state.name)}.</h2><p>La maison sent le bois ciré et les herbes sèches. Au mur, une note de votre tante : « Ce qui grandit ici grandit aussi en nous. »</p><div class="rows"><div class="row"><div><b>Une nuit paisible</b><small>Passe au lendemain, soigne l’équipe et laisse pousser les plantes arrosées.</small></div><button id="sleep">Dormir</button></div><div class="row"><div><b>Votre carnet</b><small>Sauvegarder cette journée.</small></div><button id="saveHome">Sauvegarder</button></div></div>`,
+    `<span class="eyebrow">LE DOMAINE DES VERGERS</span><h2>Bienvenue chez vous, ${esc(state.name)}.</h2><p>La maison sent le bois ciré et les herbes sèches. Au mur, une note de votre tante : « Ce qui grandit ici grandit aussi en nous. »</p><div class="rows"><div class="row"><div><b>Une nuit paisible</b><small>Passe au lendemain, soigne l’équipe et laisse pousser les plantes arrosées.</small></div><button id="sleep">Dormir</button></div><div class="row"><div><b>Votre carnet</b><small>Sauvegarder cette journée.</small></div><button id="saveHome">Sauvegarder</button></div></div>`,
   );
   $("saveHome").onclick = () => persist(true);
   $("sleep").onclick = () => {
@@ -1000,8 +992,8 @@ function home() {
 function fishing(spot=null) {
  if(fishingSession||interior)return;
  input.target=null;input.route=[];input.keys.clear();
- const angle=Math.atan2(state.player.z-110,(state.player.x-145)/1.2);
- fishingSession=new FishingSession(scene,player,spot?.lake?145+Math.cos(angle)*30*1.2:riverX(state.player.z)-1,spot?.lake?110+Math.sin(angle)*30:state.player.z,(success,message)=>{fishingSession=null;if(success){if(!add(state,'fish'))return toast('Votre sac est plein. Le poisson est relâché.');audio.play('harvest');persist();}toast(message);});
+ const angle=Math.atan2((state.player.z-PLAN.lake.z)/PLAN.lake.rz,(state.player.x-PLAN.lake.x)/PLAN.lake.rx);
+ fishingSession=new FishingSession(scene,player,spot?.lake?PLAN.lake.x+Math.cos(angle)*PLAN.lake.rx*.9:riverX(state.player.z)-1,spot?.lake?PLAN.lake.z+Math.sin(angle)*PLAN.lake.rz*.9:state.player.z,(success,message)=>{fishingSession=null;if(success){if(!add(state,'fish'))return toast('Votre sac est plein. Le poisson est relâché.');audio.play('harvest');persist();}toast(message);});
 }
 const tabs = [
   ["team", "Compagnons", "Vos liens et votre équipe active"],
@@ -1054,7 +1046,7 @@ function openMenu(tab = modalTab) {
     }).join("")}</div>`;
   }
   if (tab === "settings")
-    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Adapte ombres et finesse du rendu.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${["Basse · optimisée", "Moyenne", "Haute", "Ultra"][i]}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.4 · Interface Noverive · Sauvegarde locale versionnée</small>`;
+    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Adapte ombres et finesse du rendu.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${["Basse · optimisée", "Moyenne", "Haute", "Ultra"][i]}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.5 · Interface Noverive · Sauvegarde locale versionnée</small>`;
   const current = tabs.find((t) => t[0] === tab) || tabs[0];
   showModal(
     `<div class="journal-shell"><aside class="journal-sidebar"><div class="journal-brand"><span class="journal-sigil">❧</span><div><b>NOVERIVE</b><small>CARNET DE ${esc(state.name).toUpperCase()}</small></div></div><nav class="journal-nav">${tabs.map(([id, label]) => `<button data-tab="${id}" aria-label="${label}" title="${label}" class="${id === tab ? "selected" : ""}">${tabIcon(id)}<span>${label}</span><i></i></button>`).join("")}</nav><div class="journal-sidebar-foot"><div><small>JOUR</small><b>${state.day}</b></div><div><small>AMBRE</small><b>◈ ${state.coins}</b></div></div></aside><section class="journal-page"><header class="journal-page-header"><div><span class="eyebrow">${current[2].toUpperCase()}</span><h2>${current[1]}</h2></div><div class="journal-day"><small>${state.weather.toUpperCase()}</small><b>${$("clock").textContent || "08:00"}</b><span>${$("calendar").textContent || `Jour ${state.day}`}</span></div></header><div class="journal-content">${html}</div></section></div>`,
@@ -1309,8 +1301,8 @@ function applySettings() {
   }
 
   // Slightly shorter view distance only in Low; fog masks the chunk culling softly.
-  scene.fog.near = low ? 52 : 65;
-  scene.fog.far = low ? 105 : 135;
+  scene.fog.near = low ? 66 : 95;
+  scene.fog.far = low ? 130 : 190;
   world.setQuality?.(q);
 
   audio.enabled = state.settings.sound;
@@ -1382,101 +1374,17 @@ function cancelBuild() {
   $("interaction").style.display = "";
 }
 function drawMap(c) {
-  if (!c) return;
-  const g = c.getContext("2d"),
-    w = c.width,
-    h = c.height,
-    large = w > 200,
-    scale = large ? Math.min(w / 650, h / 650) : 1.35,
-    cx = large ? 0 : state.player.x,
-    cz = large ? -4 : state.player.z;
-  const pt = (x, z) => [w / 2 + (x - cx) * scale, h / 2 + (z - cz) * scale];
-  g.fillStyle = "#e7e5c8";
-  g.fillRect(0, 0, w, h);
-  g.strokeStyle = "#bed0b7";
-  g.lineWidth = 1;
-  for (let i = 0; i < 8; i++) {
-    g.beginPath();
-    g.ellipse(
-      w * 0.75,
-      h * 0.35,
-      10 + i * 12,
-      15 + i * 10,
-      -0.4,
-      0,
-      Math.PI * 2,
-    );
-    g.stroke();
-  }
-  g.strokeStyle = "#8ab8ad";
-  g.lineWidth = 8 * scale;
-  g.beginPath();
-  for (let z = -320; z < 320; z++) {
-    const [x, y] = pt(riverX(z), z);
-    z === -320 ? g.moveTo(x, y) : g.lineTo(x, y);
-  }
-  g.stroke();
-  g.lineWidth = 2 * scale;
-  g.strokeStyle = "#c6b590";
-  for (const line of [
-    ...CITY_X.map(x=>[x,-200,x,56]),
-    ...CITY_Z.map(z=>[-256,z,-80,z]),
-    [-256,8,256,8],
-    [-9, -55, -9, 24],
-    [-48, -19, 5, -19],
-    [-48, 8, 50, 8],
-    [-9, 8, -30, 32],
-    [-9, -30, 50, -30],
-  ]) {
-    g.beginPath();
-    g.moveTo(...pt(line[0], line[1]));
-    g.lineTo(...pt(line[2], line[3]));
-    g.stroke();
-  }
-  for (const region of REGIONS) { if(!large)break;const [rx,rz]=pt(region.x,region.z);g.fillStyle="#315c51";g.font="10px sans-serif";g.fillText(region.name,rx,rz-12); }
-  for (const b of world.colliders.filter((b) => b.kind === "rect")) {
-    g.fillStyle = "#afa78b";
-    const [x, y] = pt(b.x, b.z);
-    g.fillRect(
-      x - (b.w * scale) / 2,
-      y - (b.d * scale) / 2,
-      b.w * scale,
-      b.d * scale,
-    );
-  }
-  g.font = large ? "12px Georgia" : "8px sans-serif";
-  g.textAlign = "center";
-  if(!interior) for (const l of LANDMARKS) {
-    if (!state.discovered.includes(l.id) && l.id !== state.flags.marker)
-      continue;
-    const [x, y] = pt(l.x, l.z);
-    g.fillStyle = l.id === state.flags.marker ? "#c18a45" : "#66876f";
-    g.beginPath();
-    g.arc(x, y, large ? 4 : 3, 0, Math.PI * 2);
-    g.fill();
-    if (large) {
-      g.fillStyle = "#466252";
-      g.fillText(l.name, x, y - 10);
-    }
-  }
-  const [px, py] = pt(state.player.x, state.player.z);
-  g.fillStyle = "#315c51";
-  g.strokeStyle = "#fff5d5";
-  g.lineWidth = 2;
-  g.beginPath();
-  g.arc(px, py, large ? 5 : 4, 0, Math.PI * 2);
-  g.fill();
-  g.stroke();
-  if (large) {
-    g.fillStyle = "#7e876b";
-    g.font = "10px system-ui";
-    g.fillText("N", w - 22, 20);
-    g.fillText("LES TERRES DE LA SÈVE", w / 2, 25);
-  } else {
-    g.fillStyle = "#5e765e";
-    g.font = "9px sans-serif";
-    g.fillText("N", w / 2, 15);
-  }
+ if(!c)return;const g=c.getContext('2d'),w=c.width,h=c.height,large=w>200,scale=large?Math.min(w,h)/2150:1.35,cx=large?0:state.player.x,cz=large?0:state.player.z;
+ const pt=(x,z)=>[w/2+(x-cx)*scale,h/2+(z-cz)*scale];g.fillStyle='#dae5da';g.fillRect(0,0,w,h);
+ const patch=(x,z,rx,rz,color)=>{g.fillStyle=color;g.beginPath();const p=pt(x,z);g.ellipse(p[0],p[1],rx*scale,rz*scale,0,0,Math.PI*2);g.fill();};
+ patch(650,-650,500,390,'#b7c0b9');patch(300,-210,180,130,'#c6bba8');patch(530,530,460,480,'#abc8ad');patch(-470,490,500,400,'#c9d8ae');patch(410,280,100,80,'#73b2c3');
+ const city=pt(-768,-576);g.fillStyle='#e6e9e6';g.fillRect(city[0],city[1],768*scale,672*scale);
+ g.strokeStyle='#73b2c3';g.lineWidth=Math.max(1,9*scale);g.beginPath();for(let z=-1024;z<=1024;z+=8){const p=pt(riverX(z),z);z===-1024?g.moveTo(...p):g.lineTo(...p);}g.stroke();
+ g.strokeStyle='#899b9c';g.lineWidth=Math.max(.65,4*scale);for(const [x,z,xx,zz] of [...CITY_X.map(x=>[x,-576,x,96]),...CITY_Z.map(z=>[-768,z,0,z]),[0,8,820,8],[-96,96,-96,900],[170,-350,740,-350],[180,280,410,280]]){g.beginPath();g.moveTo(...pt(x,z));g.lineTo(...pt(xx,zz));g.stroke();}
+ g.strokeStyle='#a89878';g.lineWidth=Math.max(.8,2*scale);g.beginPath();for(let z=-900;z<=900;z+=12){const p=pt(180+Math.sin(z*.006)*38,z);z===-900?g.moveTo(...p):g.lineTo(...p);}g.stroke();
+ g.textAlign='center';g.font='10px system-ui';if(large)for(const r of REGIONS){const [x,y]=pt(r.x,r.z);g.fillStyle='#334f53';g.fillText(r.name.split(' • ')[0],x,y-12);}
+ if(!interior)for(const l of LANDMARKS){if(!state.discovered.includes(l.id)&&l.id!==state.flags.marker)continue;const [x,y]=pt(l.x,l.z);g.fillStyle=l.id===state.flags.marker?'#d89b40':'#537d7e';g.beginPath();g.arc(x,y,large?4:3,0,Math.PI*2);g.fill();}
+ const [px,py]=pt(state.player.x,state.player.z);g.fillStyle='#1e6571';g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(px,py,large?5:4,0,Math.PI*2);g.fill();g.stroke();g.fillStyle='#34545d';g.font='bold 10px system-ui';g.fillText('N',w-20,20);if(large)g.fillText('NOVERIVE · ATLAS DES HORIZONS',w/2,22);
 }
 function startBattle(w) {
   if (state.team.every((c) => c.hp <= 0)) {
@@ -1737,10 +1645,10 @@ function updateLighting() {
     sunset = Math.max(0, 1 - Math.abs(h - 18) / 2);
   sun.intensity = (state.weather === "pluie" ? 1.2 : 2.6) * day;
   sun.color.set("#fff1da").lerp(new T.Color("#ecad78"), sunset * 0.65);
-  ambient.intensity = 0.9 + day * 0.55;
-  ambient.color.set(day < 0.2 ? "#96b4ce" : "#d6dff2");
+  ambient.intensity = 1.65 + day * .85;
+  ambient.color.set(day < 0.2 ? "#96b4ce" : "#dae9ff");
   scene.background.set(
-    day < 0.2 ? "#607889" : state.weather === "pluie" ? "#a6bcb3" : "#c4d8ce",
+    day < 0.2 ? "#607889" : state.weather === "pluie" ? "#a6bcb3" : "#a8c9df",
   );
   scene.fog.color.copy(scene.background);
   world.water.material.uniforms.sun.value = day;
@@ -1820,10 +1728,7 @@ function movePlayer(dt) {
   let tx = state.player.x - Math.sin(player.rotation.y) * 1.4 - 1,
     tz = state.player.z - Math.cos(player.rotation.y) * 1.4;
   const atFarm =
-    state.player.x > -46 &&
-    state.player.x < -14 &&
-    state.player.z > 20 &&
-    state.player.z < 44;
+    state.player.x>PLAN.farm.left && state.player.x<PLAN.farm.right && state.player.z>PLAN.farm.top && state.player.z<PLAN.farm.bottom;
   if (state.flags.helper && atFarm) {
     const p =
       state.plots.find((p) => p.stage > 0 && p.stage < 4 && p.water < 0.6) ||
@@ -1877,7 +1782,7 @@ function updateCamera(dt) {
     dist = Math.max(21, input.zoom) * (compact ? 0.76 : 1),
     angle = 0.65 + input.angle;
   if (!started) {
-    target = new T.Vector3(-12, 2, -6);
+    target = new T.Vector3(PLAN.plaza.x, 2, PLAN.plaza.z);
     dist = 54;
     angle = 0.6 + Math.sin(time * 0.035) * 0.08;
   } else if (battle) {
@@ -1948,7 +1853,7 @@ function updateCamera(dt) {
       const f = i / steps;
       if (f * path < .8) continue;
       const sx = cameraTarget.x + dx * f, sz = cameraTarget.z + dz * f;
-      if (solidAt(sx, sz, .14)) { safeT = Math.max(.2, (i - 2) / steps); break; }
+      if (staticCollision(sx, sz, .14, cameraTarget.y+(tpsPos.y-cameraTarget.y)*f)) { safeT = Math.max(2.4/path, (i - 2) / steps); break; }
     }
     if (safeT < 1) {
       tpsPos.x = cameraTarget.x + dx * safeT;
@@ -2264,19 +2169,18 @@ if(location.port==='4186' && new URLSearchParams(location.search).has('qa')){
  const panel=document.createElement('details');panel.id='qaPanel';panel.open=true;panel.style.cssText='position:fixed;left:8px;bottom:8px;z-index:9999;background:#142e32ed;color:white;padding:8px;max-width:96vw;font:12px monospace';panel.innerHTML='<summary>Vérifications de la refonte</summary><div id="qaActions"></div><pre id="qaReadout" style="max-height:140px;overflow:auto"></pre>';document.body.append(panel);
  const actions=panel.querySelector('#qaActions');
  function qaButton(label,fn){const b=document.createElement('button');b.textContent=label;b.style.cssText='font:12px sans-serif;padding:5px;margin:2px';b.onclick=fn;actions.append(b);}
- function warp(x,z){if(!started){const q=newState();q.settings.sound=false;begin(q);}if(interior)leaveHome();if(battle)endBattle('Fin du test');closeModal();state.player={x,z};input.target=null;input.keys.clear();cameraTarget.set(x,height(x,z)+1,z);movePlayer(0);}
- for(const [label,x,z] of [['Place',-9,8],['Centre',-168,-72],['Ferme',-32,29],['Forêt',82,30],['Lac',100,110],['Carrière',110,-80],['Grotte',192,-120],['Crêtes',210,-190],['Réserve',235,210]])qaButton(label,()=>warp(x,z));
+ function warp(x,z){if(!started){const q=newState();q.settings.sound=false;begin(q);}if(interior)leaveHome();if(battle)endBattle('Fin du test');closeModal();if(world.collides(x,z,.45)){outer:for(let r=.5;r<12;r+=.5)for(let i=0;i<24;i++){const xx=x+Math.cos(i*Math.PI/12)*r,zz=z+Math.sin(i*Math.PI/12)*r;if(!world.collides(xx,zz,.45)){x=xx;z=zz;break outer;}}}state.player={x,z};input.target=null;input.keys.clear();cameraTarget.set(x,height(x,z)+1,z);movePlayer(0);}
+ for(const [label,x,z] of [['Place',-24,36],['Centre',-240,-168],['Ferme',-96,180],['Forêt',180,80],['Lac',292,280],['Carrière',260,-200],['Grotte',465,-350],['Crêtes',650,-550],['Réserve',650,650]])qaButton(label,()=>warp(x,z));
  let qaRunning=false;
  qaButton('Parcours complet',async()=>{if(qaRunning)return;qaRunning=true;const results=[];let out=document.getElementById('qaResults');if(!out){out=document.createElement('pre');out.id='qaResults';out.style.cssText='max-height:160px;overflow:auto;max-width:600px;white-space:pre-wrap';panel.append(out);}try{
- for(let pass=0;pass<2;pass++)for(const [name,x,z] of [['centre',-168,-72],['ferme',-32,29],['foret',82,30],['lac',100,110],['carriere',110,-80],['grotte',192,-120],['cretes',210,-190],['reserve',235,210]]){
+ for(let pass=0;pass<2;pass++)for(const [name,x,z] of [['centre',-240,-168],['ferme',-96,180],['foret',180,80],['lac',292,280],['carriere',260,-200],['grotte',465,-350],['cretes',650,-550],['reserve',650,650]]){
   warp(x,z);out.textContent='Parcours '+(pass+1)+' : '+name;const until=performance.now()+20000;let stable=0;
   while(performance.now()<until){await new Promise(r=>setTimeout(r,250));if(world.streamer.pending===0&&world.streamer.stats().missing===0){stable++;if(stable>=4)break;}else stable=0;}
   const d=window.noveriveDiagnostics();results.push({pass,name,fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,...d.memory,active:d.streaming.active,cached:d.streaming.cached,errors:d.errors.length+d.streaming.errors.length+d.streaming.failures.length,settled:stable>=4});
  }
  out.textContent=JSON.stringify(results,null,1);panel.dataset.qaReport=JSON.stringify(results);
  }catch(e){out.textContent=e.stack;}finally{qaRunning=false;}});
- qaButton('Expéditions',()=>openExpeditions());qaButton('Vue large',()=>{input.zoom=42;});qaButton('TPS',()=>{input.zoom=12;});
- qaButton('Maison',()=>{warp(-36,29);enterHome('home');});qaButton('Café',()=>{warp(-20,-1);enterHome('house--20--1');});qaButton('Sac',()=>openMenu('bag'));qaButton('Fabriquer',()=>openMenu('craft'));qaButton('Carte',()=>openMenu('map'));qaButton('Combat',()=>{const w=world.wild.find(w=>w.id!=='gardien');if(w)startBattle(w);});
+ qaButton('Qualité basse',()=>{state.settings.quality='low';applySettings();});qaButton('Qualité haute',()=>{state.settings.quality='high';applySettings();});qaButton('Masquer',()=>{panel.hidden=true;});window.addEventListener('keydown',e=>{if(e.key==='F9')panel.hidden=!panel.hidden;});qaButton('Panorama',()=>{input.zoom=19;input.angle=0;});qaButton('Cultures',()=>{warp(-96,190);state.plots.forEach((p,i)=>{p.seed=['seed','wheatSeed','carrotSeed','flaxSeed','pumpkinSeed'][i%5];p.stage=4;p.water=1;});world.sync(state);});qaButton('Expéditions',()=>openExpeditions());qaButton('Vue large',()=>{input.zoom=42;});qaButton('TPS',()=>{input.zoom=12;});
+ qaButton('Maison',()=>{warp(PLAN.door.x,PLAN.door.z);enterHome('home');});qaButton('Café',()=>{warp(-34,24);enterHome('house--40-24');});qaButton('Sac',()=>openMenu('bag'));qaButton('Fabriquer',()=>openMenu('craft'));qaButton('Carte',()=>openMenu('map'));qaButton('Combat',()=>{const w=world.wild.find(w=>w.id!=='gardien');if(w)startBattle(w);});
  setInterval(()=>{const d=window.ambreluneDiagnostics();panel.querySelector('#qaReadout').textContent=JSON.stringify({fps:Math.round(d.fps),calls:d.drawCalls,triangles:d.triangles,position:d.state.player,memory:d.memory,streaming:d.streaming,errors:d.errors},null,1);},1000);
 }
-
