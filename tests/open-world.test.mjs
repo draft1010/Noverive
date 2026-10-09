@@ -20,3 +20,5 @@ test('urban recycling produces metal with the existing crafting system',()=>{con
 
 
 test('camera clears a parked car above its roof while ground collision stays solid',()=>{const p=sectorLayout(-8,-6).models.find(p=>/^(Car|Taxi|PostCar)/.test(p.id));assert.ok(p);assert.equal(staticCollision(p.x,p.z,.14),true);assert.equal(staticCollision(p.x,p.z,.14,p.y+ASSETS[p.id].size[1]*p.s+.5),false);});
+import {PLAN} from '../src/world/plan.js';
+test('every cultivation plot fits entirely outside the farm driveway',()=>{for(let col=0;col<4;col++)for(let row=0;row<3;row++){const x=PLAN.plots.x+col*2.25,z=PLAN.plots.z+row*2.25;for(const dx of [-1,0,1])for(const dz of [-1,0,1]){assert.equal(roadAt(x+dx,z+dz),null);assert.equal(staticCollision(x+dx,z+dz,.05),false);}}});

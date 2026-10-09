@@ -18,7 +18,7 @@ Le catalogue regroupe les archives locales Cartoon City, Characters, Farm, Low P
 
 ## Vérification
 
-- 34 tests automatiques réussis : sauvegardes, navigation, collisions, parcelle, cultures, fabrication, habitats, ressources, dépendances des modèles, combats et captures.
+- 35 tests automatiques réussis : sauvegardes, navigation, collisions, parcelle, cultures, fabrication, habitats, ressources, dépendances des modèles, combats et captures.
 - Scénarios navigateur réussis : menus, entrer/sortir, placement et déplacement de meubles, annulation, coffre, repos, reprise à l'étage, montée et descente de l'escalier.
 - Combat et 18 effets d'attaque, retour au monde sans erreur JavaScript.
 - Pêche complète, annulation, échec anticipé, récompense unique et quatre outils équipés/animés.
