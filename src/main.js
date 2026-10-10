@@ -1,3 +1,4 @@
+import {PLAYER_RADIUS,slideMove} from './world/collision.js';
 import {Presentation} from './rendering/presentation.js';
 import {GRAPHICS,graphicsProfile,renderRatio,AdaptiveResolution,FramePacer} from './rendering/graphics.js';
 import {atmosphere,contactShadows} from './rendering/atmosphere.js';
@@ -161,7 +162,7 @@ let interior = null;
 prepareOccluders(scene);
 const currentScene = () => interior?.scene || scene;
 const surfaceHeight = (x,z) => interior ? indoorHeight(x,z,state.player.y||0) : height(x,z);
-const solidAt = (x,z,r=.4) => interior ? interior.collides(x,z,r,state.player.y||0) : world.collides(x,z,r);
+const solidAt = (x,z,r=PLAYER_RADIUS) => interior ? interior.collides(x,z,r,state.player.y||0) : world.collides(x,z,r);
 const placementSolidAt = (x,z,r=.12) => interior ? (indoorPlacementCollision(x,z,r,state.player.y||0)||interior.fixedColliders.some(c=>Math.abs((state.player.y||0)-c.y)<1&&Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r)) : world.collides(x,z,r);
 const snapPlacement = (value,type) => { const step=(interior||type==='fence')?.1:1; return Math.round(value/step)*step; };
 const fenceEnds=(x,z,r)=>{const hx=Math.cos(r)*.95,hz=-Math.sin(r)*.95;return [{x:x+hx,z:z+hz},{x:x-hx,z:z-hz}];};
@@ -1029,7 +1030,7 @@ function openMenu(tab = modalTab) {
   if (tab === "craft") html = craftView(state, craftCanAfford, craftAvailable, craftOutputFits);
   if (tab === "build") html = gardenView(state);
   if (tab === "map")
-    html = `<div class="menu-lead"><div><span class="section-kicker">RÉGION DE NOVERIVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu pour suivre la flèche du repère. Pour la carrière et la grotte, traversez le pont à l’est de la ville puis suivez le sentier vers le nord. Les cristaux se récoltent avec la pioche.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
+    html = `<div class="menu-lead"><div><span class="section-kicker">RÉGION DE NOVERIVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu pour suivre la flèche du repère. Pour la carrière et la grotte, rejoignez la rive est par un pont ou en traversant la rivière peu profonde, puis suivez le sentier vers le nord. Les cristaux se récoltent avec la pioche.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
       (l) => state.discovered.includes(l.id) || ["cave","quarry"].includes(l.id),
     )
       .map((l) => `<button data-mark="${l.id}"><span>◇</span>${l.name}</button>`)
@@ -1679,14 +1680,14 @@ function movePlayer(dt) {
     nz = z + dz * dt * speed;
   const blocked = (a, b) =>
     solidAt(a, b) ||
-    state.buildings.some(o=>furnitureBlocks(o,a,b,.35,state.player.y||0,state.location)) ||
+    state.buildings.some(o=>furnitureBlocks(o,a,b,PLAYER_RADIUS,state.player.y||0,state.location)) ||
     (!interior && world.npcs.some((n) => {
       const nextDistance = Math.hypot(a - n.x, b - n.z);
       // A journey can land next to a wandering resident; always allow separation.
       return nextDistance < 0.55 && nextDistance < Math.hypot(x - n.x, z - n.z);
     }));
-  if (!blocked(nx, z)) state.player.x = nx;
-  if (!blocked(state.player.x, nz)) state.player.z = nz;
+  const next=slideMove(x,z,nx-x,nz-z,blocked);
+  state.player.x=next.x;state.player.z=next.z;
   if(interior)state.player.y=indoorHeight(state.player.x,state.player.z,state.player.y||0);
   const moving = Math.hypot(state.player.x - x, state.player.z - z) > 0.001;
   if (!moving && input.target && Math.hypot(dx, dz) > 0) input.target = null;

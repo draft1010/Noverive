@@ -1,5 +1,7 @@
-const CACHE = "noverive-v71-exploration";
+const CACHE = "noverive-v72-collisions";
 const FILES = [
+  "./src/world/collision.js",
+  "./src/world/collision-profiles.js",
   "./",
   "./index.html",
   "./style.css",

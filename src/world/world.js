@@ -1,3 +1,5 @@
+import {hitsCollider,PLAYER_RADIUS} from './collision.js';
+import {terrainBlocked} from './terrain.js';
 import {cropVisual} from '../rendering/crops.js';
 import {upgradeFurniture,disposeFurniture} from '../rendering/modern-furniture.js';
 import {buildModernWorld,populateModernWild,populateModernPeople} from './modern-world.js';
@@ -66,17 +68,12 @@ export class World {
     this.buildLampPoolGeometry = new T.PlaneGeometry(5.8, 5.8);
     this.buildLampPoolGeometry.rotateX(-Math.PI / 2);
   }
-  collides(x, z, r = 0.4) {
+  collides(x, z, r = PLAYER_RADIUS) {
     if (Math.abs(x)>WORLD_LIMIT-2 || Math.abs(z)>WORLD_LIMIT-2) return true;
     if(staticCollision(x,z,r))return true;
-    if(terrainHeight(x,z)<-.3 && !onBridge(x,z))return true;
-    if (Math.abs(x - riverX(z)) < 5.1 && !onBridge(x, z)) return true;
+    if(terrainBlocked(x,z))return true;
     for (const c of this.colliders) {
-      if (c.disabled) continue;
-      if (c.kind === "rect") {
-        if (Math.abs(x - c.x) < c.w / 2 + r && Math.abs(z - c.z) < c.d / 2 + r)
-          return true;
-      } else if (Math.hypot(x - c.x, z - c.z) < c.r + r) return true;
+      if(hitsCollider(c,x,z,r))return true;
     }
     return false;
   }

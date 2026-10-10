@@ -1,3 +1,4 @@
+import {modelCollider,hitsCollider,circleHitsRect} from './collision.js';
 import {ASSETS} from './asset-catalog.js';
 import {biomeAt,roadAt,isFarm,hash,chunkKey,blockKind} from './regions.js';
 import {PLAN,CITY_BOUNDS,inCity} from './plan.js';
@@ -30,7 +31,7 @@ function reserve(x,z){return roadAt(x,z)||isFarm(x,z)||fields(x,z)||clearLandmar
 export function sectorLayout(cx,cz){
  const key=`${cx},${cz}`;if(layouts.has(key)){const value=layouts.get(key);layouts.delete(key);layouts.set(key,value);return value;}
  const models=[],colliders=[],resources=[];
- function put(id,x,z,s=1,r=0,solid=true,detail=false){if(chunkKey(x,z)!==key||!ASSETS[id])return;const p={id,x,z,y:height(x,z),s,r,detail};if(!/^(Road_|StreetTile_)/.test(id)&&overlapsRoad(p))return;models.push(p);if(solid){const c=/Tree/.test(id)?{x,z,r:(id.startsWith('EA01_Env_Tree')?1.65:.42)*s,kind:'circle'}:footprintFor(p);c.y=p.y;c.height=ASSETS[id].size[1]*s;colliders.push(c);}return p;}
+ function put(id,x,z,s=1,r=0,solid=true,detail=false){if(chunkKey(x,z)!==key||!ASSETS[id])return;const p={id,x,z,y:height(x,z),s,r,detail};if(!/^(Road_|StreetTile_)/.test(id)&&overlapsRoad(p))return;models.push(p);if(solid){const c=modelCollider(p,footprintFor(p));c.y=p.y;c.height=ASSETS[id].size[1]*s;colliders.push(c);}return p;}
  function building(id,x,z,rotation=0,maxWidth=10,maxDepth=12){const a=ASSETS[id],r=rotation+Math.PI/2,c=Math.abs(Math.cos(r)),t=Math.abs(Math.sin(r)),s=Math.min(1.15,maxWidth/(a.size[0]*c+a.size[2]*t),maxDepth/(a.size[0]*t+a.size[2]*c));return put(id,x,z,s,rotation+Math.PI/2);}
  function garden(x,z,r=0){put('FlowerPlacet_5_1_A',x,z,1,r);for(let k=-3;k<=3;k++){const d=k*.49,dx=Math.sin(r)*d,dz=Math.cos(r)*d;const bush=put('Bush_1_A_1',x+dx,z+dz,.46,r,false,true);if(bush)bush.y+=.66;for(const side of [-1,1]){const flower=put(k%2?'Flowers_1_A':'Flowers_2_A',x+dx+Math.cos(r)*side*.34,z+dz-Math.sin(r)*side*.34,1.35,r,false,true);if(flower)flower.y+=.73;}}}
  for(const p of FIXED){const m=put(p.id,p.x,p.z,p.s,p.r,p.solid!==false);if(m)m.y+=p.dy||0;}
@@ -110,5 +111,5 @@ export function sectorLayout(cx,cz){
  for(const [i,x,z,type] of [[0,251,-208,'stone'],[1,262,-210,'ore'],[2,270,-203,'coal'],[3,261,-190,'ore']])if(chunkKey(x,z)===key)resources.push({id:'v3:quarry:'+i,type,x,z,model:'EA01_Env_Rock_01c'});
  const result={models,colliders,resources};layouts.set(key,result);if(layouts.size>512)layouts.delete(layouts.keys().next().value);return result;
 }
-export function staticCollision(x,z,r=.4,cameraY=null){for(let cx=Math.floor((x-28)/32);cx<=Math.floor((x+28)/32);cx++)for(let cz=Math.floor((z-28)/32);cz<=Math.floor((z+28)/32);cz++)for(const c of sectorLayout(cx,cz).colliders)if((cameraY===null||(cameraY>c.y-.2&&cameraY<c.y+c.height+.1))&&(c.kind==='rect'?(Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r):Math.hypot(x-c.x,z-c.z)<c.r+r))return true;return false;}
+export function staticCollision(x,z,r=.28,cameraY=null){for(let cx=Math.floor((x-28)/32);cx<=Math.floor((x+28)/32);cx++)for(let cz=Math.floor((z-28)/32);cz<=Math.floor((z+28)/32);cz++)for(const c of sectorLayout(cx,cz).colliders){if(cameraY!==null&&(cameraY<c.y-.2||cameraY>c.y+c.height+.1))continue;if(cameraY!==null&&cameraY>c.y+1.7?circleHitsRect(x,z,r,c):hitsCollider(c,x,z,r))return true;}return false;}
 export function resourceLocations(cx,cz){return sectorLayout(cx,cz).resources.filter(r=>!staticCollision(r.x,r.z,.8)&&!overlapsRoad({id:r.model,x:r.x,z:r.z,s:r.type==='fiber'?.42:r.type==='wood'?1.1:.22}));}

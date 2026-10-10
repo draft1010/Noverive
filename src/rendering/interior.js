@@ -1,3 +1,4 @@
+import {circleHitsRect} from '../world/collision.js';
 import {buildInterior} from './interior-design.js';
 import {placeModel,disposeModels} from '../world/model-library.js';
 import {upgradeFurniture,disposeFurniture} from './modern-furniture.js';
@@ -36,6 +37,6 @@ export class Interior {
   disposeFurniture(this.furniture);this.furniture.traverse(o=>{if(o.isInstancedMesh)o.dispose();});this.furniture.clear();
   for(const b of list){const g=new T.Group(),f=new Factory(g,true);furnishing(f,b.type,0,0,0,b.r);f.flush();upgradeFurniture(g,b);g.position.set(b.x,b.y||0,b.z);g.userData.building=b;this.furniture.add(g);}
  }
- collides(x,z,r=.4,y=0){return indoorCollision(x,z,r,y)||this.fixedColliders.some(c=>Math.abs(y-c.y)<1&&Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r);}
+ collides(x,z,r=.4,y=0){return indoorCollision(x,z,r,y)||this.fixedColliders.some(c=>Math.abs(y-c.y)<1&&circleHitsRect(x,z,r,c));}
  dispose(){disposeModels(this.fixtures);disposeFurniture(this.furniture);for(const m of this.materials)m.dispose();this.root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.isInstancedMesh)o.dispose();});this.furniture.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const m of this.floors){m.geometry.dispose();m.material.dispose();}this.scene.clear();}
 }

@@ -1,3 +1,5 @@
+import {modelCollider} from './collision.js';
+import {footprintFor} from './layout.js';
 import {graphicsProfile} from '../rendering/graphics.js';
 import {meadowTufts} from '../rendering/meadow.js';
 import {T} from '../rendering/art.js';
@@ -24,7 +26,7 @@ export class WorldStreamer {
   const wanted=wantedChunks(x,z,this.radius),keep=new Set(wantedChunks(x,z,this.radius+24).map(c=>c.key));this.desiredKeys=wanted.map(c=>c.key);
   for(const [key,sector] of this.active)if(!keep.has(key))this.unload(key,sector);
   for(const c of wanted){if(this.active.has(c.key))continue;if(this.pending>=2)break;this.load(c);}
-  for(const r of this.world.resources){const visible=!(state.depleted[r.id]>state.day);r.mesh.visible=visible;if(r.collider)r.collider.disabled=!visible;}
+  for(const r of this.world.resources){const visible=!(state.depleted[r.id]>state.day);r.mesh.visible=visible;if(r.collider)r.collider.disabled=!visible||r.type==='fiber';}
   for(const s of this.active.values())if(s.detail)s.detail.visible=Math.hypot(s.x-x,s.z-z)<this.profile.detail;
   for(const sector of this.active.values())for(const grass of sector.grass||[]){grass.count=Math.ceil(grass.userData.fullCount*this.profile.grass);grass.visible=Math.hypot(sector.x-x,sector.z-z)<this.profile.detail;}
   this.world.chunks=[...this.active.values()];
@@ -40,7 +42,7 @@ export class WorldStreamer {
    // Sequential within a sector bounds both network and GPU upload spikes.
    for(const [key,placements] of groups){if(sector.dead)break;if(placements[0].meadow){const grass=meadowTufts(placements,g);grass.userData.fullCount=placements.length;sector.grass??=[];sector.grass.push(grass);continue;}const id=placements[0].id,root=await acquireModel(id);if(sector.dead){releaseModel(id);break;}sector.refs.push(id);instanceModel(root,id,placements,placements[0].detail?sector.detail:g);await new Promise(resolve=>setTimeout(resolve,0));}
    for(const spec of resourceLocations(c.cx,c.cz)){if(sector.dead)break;let mesh;if(spec.type==='crystal'){mesh=crystalCluster();}else{const root=await acquireModel(spec.model);if(sector.dead){releaseModel(spec.model);break;}sector.refs.push(spec.model);mesh=new T.Group();instanceModel(root,spec.model,[{x:0,y:0,z:0,s:spec.type==='fiber'?.42:spec.type==='wood'?1.1:.22}],mesh);if(['crystal','ore','coal'].includes(spec.type)){mesh.traverse(o=>{if(!o.isMesh)return;const clone=m=>{const a=m.clone();a.color.set(spec.type==='crystal'?'#9acfd5':spec.type==='ore'?'#bb8962':'#424d54');if(spec.type==='crystal'){a.emissive.set('#3b747d');a.emissiveIntensity=.35;}return a;};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);o.userData.ownsMaterial=true;});}
-      }mesh.position.set(spec.x,height(spec.x,spec.z),spec.z);g.add(mesh);const collider=w.collider(spec.x,spec.z,.4),resource={...spec,mesh,collider};sector.resources.push(resource);sector.colliders.push(collider);w.resources.push(resource);mesh.visible=!(this.state?.depleted[spec.id]>this.state?.day);collider.disabled=!mesh.visible;}
+      }mesh.position.set(spec.x,height(spec.x,spec.z),spec.z);g.add(mesh);const collider=spec.type==='crystal'?w.collider(spec.x,spec.z,.48):modelCollider({id:spec.model,s:spec.type==='wood'?1.1:spec.type==='fiber'?.42:.22},footprintFor({id:spec.model,x:spec.x,z:spec.z,s:spec.type==='wood'?1.1:spec.type==='fiber'?.42:.22})),resource={...spec,mesh,collider};if(spec.type!=='crystal')w.colliders.push(collider);sector.resources.push(resource);sector.colliders.push(collider);w.resources.push(resource);mesh.visible=!(this.state?.depleted[spec.id]>this.state?.day);collider.disabled=!mesh.visible||spec.type==='fiber';}
    sector.ready=true;
   }catch(error){this.failures.push(`${c.key}: ${error.message}`);console.error('Secteur indisponible',c.key,error);}finally{this.pending--;}
  }

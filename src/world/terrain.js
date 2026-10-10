@@ -13,3 +13,7 @@ export function bridgeHeight(x,z){const c=Math.abs(z-8)<Math.abs(z+30)?8:-30,t=M
 export function terrainHeight(x,z){let h=baseTerrainHeight(x,z);const d=Math.hypot(x-PLAN.arena.x,z-PLAN.arena.z);if(d<15)h=baseTerrainHeight(PLAN.arena.x,PLAN.arena.z);for(const [lx,lz,r] of [[465,-374,24],[260,-200,22]]){const d=Math.hypot(x-lx,z-lz),t=Math.max(0,Math.min(1,(r+12-d)/12));h=h*(1-t)+baseTerrainHeight(lx,lz)*t;}return onBridge(x,z)?Math.min(h,bridgeHeight(x,z)-.2):h;}
 export const height=(x,z)=>onBridge(x,z)?bridgeHeight(x,z):terrainHeight(x,z);
 export const clearLandmark=(x,z)=>Math.hypot(x-PLAN.arena.x,z-PLAN.arena.z)<17||Math.hypot(x-PLAN.plaza.x,z-PLAN.plaza.z)<16||Math.hypot(x-465,z+374)<36||Math.hypot(x-260,z+200)<34||onBridge(x,z);
+
+// The river is 72 cm deep and can be waded across; the deeper lake remains impassable.
+export const waterDepth=(x,z)=>onBridge(x,z)?0:Math.max(0,-.48-terrainHeight(x,z));
+export const terrainBlocked=(x,z)=>waterDepth(x,z)>.85;

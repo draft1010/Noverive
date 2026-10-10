@@ -1,3 +1,4 @@
+import {circleHitsRect} from '../world/collision.js';
 import {PLAN} from '../world/plan.js';
 // Additive content: existing save identifiers keep their original meaning.
 export const CROPS = {
@@ -195,8 +196,8 @@ export function footprint(type, r=0) {
 }
 export function furnitureBlocks(b,x,z,r=.4,y=0,location='world') {
  if(spaceOf(b)!==location || Math.abs((b.y||0)-y)>1 || b.type==='rug') return false;
- const [w,d]=footprint(b.type,b.r);
- return Math.abs(x-b.x)<w/2+r && Math.abs(z-b.z)<d/2+r;
+ const c=Math.cos(b.r||0),t=Math.sin(b.r||0),dx=x-b.x,dz=z-b.z,[width,depth]=footprint(b.type,0);
+ return circleHitsRect(dx*c-dz*t,dx*t+dz*c,r,{x:0,z:0,w:width,d:depth});
 }
 export function stationAvailable(s,station) {
  if(!station) return true;
