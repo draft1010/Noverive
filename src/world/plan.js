@@ -3,7 +3,7 @@ export const PLAN = {
  spawn:{x:-24,z:36}, plaza:{x:-24,z:24}, home:{x:-96,z:157}, door:{x:-96,z:165},
  farm:{x:-96,z:190,left:-164,right:-74,top:140,bottom:220},
  plots:{x:-111,z:185}, workshop:{x:-115,z:177}, arena:{x:280,z:-140},
- lake:{x:410,z:280,rx:100,rz:80}, cave:{x:465,z:-350},
+ lake:{x:410,z:280,rx:100,rz:80}, cave:{x:465,z:-374},
 };
 export const WORLD_SIZE=2048;
 export const CITY_BLOCK=48;

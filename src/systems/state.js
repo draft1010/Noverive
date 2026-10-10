@@ -30,6 +30,7 @@ export function newState(starter = "velune", name = "Élo", color = "#657d95") {
   };
   return {
     version: 2,
+    questVersion: 2,
     location: "world",
     selectedSeed: "seed",
     name: name.slice(0, 24),
@@ -79,6 +80,8 @@ export function normalizeSave(raw) {
   return {
     ...base,
     ...raw,
+    questVersion: 2,
+    quest: raw.questVersion===2 ? (raw.quest||0) : ((raw.quest||0)>=2 ? 2 : raw.quest||0),
     stats: { ...base.stats, ...raw.stats },
     location: typeof raw.location==='string' && /^(world|home|house--?\d+--?\d+)$/.test(raw.location) ? raw.location : 'world',
     selectedSeed: CROPS[raw.selectedSeed] ? raw.selectedSeed : 'seed',
@@ -87,7 +90,7 @@ export function normalizeSave(raw) {
     buildings,
     settings: { ...base.settings, ...raw.settings, graphicsVersion:1, quality:raw.settings?.graphicsVersion===1 && ['low','medium','high','ultra'].includes(raw.settings?.quality)?raw.settings.quality:'low' },
     team: raw.team.map((c) => ({ ...makeCreature(c.id, c.level), ...c })),
-    flags: { ...raw.flags },
+    flags: { ...raw.flags, ...(raw.questVersion!==2 && raw.quest>=2 ? {bedQuestResume:raw.quest+1} : {}) },
     discovered: raw.discovered || ["city"],
     plots: Array.isArray(raw.plots)
       ? raw.plots.map((p) => {
@@ -178,13 +181,21 @@ export function craft(s, r) {
   if (!r || !stationAvailable(s,r.station) || !craftCanAfford(s,r.cost) || !craftOutputFits(s,r)) return false;
   if (!spendCraft(s, r.cost) || !add(s, r.id, r.count)) return false;
   if (r.id === "potion") s.flags.brewed = true;
+  if(r.id === "sleepingBed") s.flags.craftedSleepingBed = true;
   advanceQuest(s);
   return true;
 }
+function grantBedMaterials(s) {
+  if(s.quest===2&&!s.flags.bedMaterialsGranted){s.flags.bedMaterialsGranted=true;s.inventory.plank=(s.inventory.plank||0)+6;s.inventory.cloth=(s.inventory.cloth||0)+3;s.inventorySlots=syncSlotLayout(s.inventory,s.inventorySlots,BAG_SLOTS);}
+}
 export function advanceQuest(s) {
+  grantBedMaterials(s);
   let advanced = false;
   while (s.quest < QUESTS.length - 1 && QUESTS[s.quest].test(s)) {
-    s.quest++;
+    const resume=s.quest===2?s.flags.bedQuestResume:0;
+    s.quest=resume||s.quest+1;
+    if(resume)delete s.flags.bedQuestResume;
+    grantBedMaterials(s);
     s.coins += 35;
     advanced = true;
   }

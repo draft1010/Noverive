@@ -17,7 +17,7 @@ export function landscapeMaterial(){
    bool city=p.x>=-768.&&p.x<=0.&&p.y>=-576.&&p.y<=96.;
    vec2 grid=abs(p-floor(p/48.+.5)*48.);
    bool country=(p.y>96.&&p.y<120.&&abs(p.x+96.)<3.8)||(p.x>=-100.&&p.x<=-60.&&abs(p.y-120.)<3.8)||(p.y>=120.&&abs(p.x+64.)<3.8)||(p.x>0.&&p.x<820.&&abs(p.y-8.)<3.8);
-   bool trail=(p.x>28.&&abs(p.x-(180.+sin(p.y*.006)*38.))<2.2)||(p.x>170.&&p.x<740.&&abs(p.y+350.)<2.2)||(p.x>180.&&p.x<430.&&abs(p.y-280.)<2.2)||(p.x>-130.&&p.x<-68.&&abs(p.y-168.)<2.);
+   bool trail=(p.x>140.&&p.x<261.&&abs(p.y+200.)<2.2)||(p.y< -348.&&p.y> -360.&&abs(p.x-465.)<2.2)||(p.x>28.&&abs(p.x-(180.+sin(p.y*.006)*38.))<2.2)||(p.x>140.&&p.x<740.&&abs(p.y+350.)<2.2)||(p.x>180.&&p.x<430.&&abs(p.y-280.)<2.2)||(p.x>-130.&&p.x<-68.&&abs(p.y-168.)<2.);
    if(city)surface=(grid.x<4.||grid.y<4.)?3.:(vSurface<.5?0.:1.);
    else if(country)surface=3.;else if(trail)surface=2.;else surface=length(vec2((p.x-410.)/1.25,p.y-280.))<96.?4.:0.;
    if(surface<.5){

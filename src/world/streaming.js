@@ -7,6 +7,8 @@ import {sectorLayout,resourceLocations} from './layout.js';
 import {acquireModel,releaseModel,instanceModel,modelStats} from './model-library.js';
 import {landscapeMaterial} from '../rendering/landscape-material.js';
 import {PLAN,inCity} from './plan.js';
+const crystalGeometry=new T.CylinderGeometry(0,.32,1.5,5,1),crystalMaterial=new T.MeshStandardMaterial({color:'#72edec',emissive:'#159cbd',emissiveIntensity:.65,roughness:.22,metalness:.25});
+function crystalCluster(){const g=new T.Group();for(let i=0;i<5;i++){const m=new T.Mesh(crystalGeometry,crystalMaterial),a=i*2.4,k=i===0?1.35:.55+i*.09;m.scale.setScalar(k);m.position.set(i?Math.cos(a)*.44:0,k*.65,i?Math.sin(a)*.44:0);m.rotation.z=i?Math.cos(a)*.35:0;m.castShadow=true;g.add(m);}return g;}
 const grassMaterial=landscapeMaterial();
 grassMaterial.userData.cutawayExcluded=true;
 export function terrainMesh(cx,cz,size=32,steps=16){
@@ -37,8 +39,8 @@ export class WorldStreamer {
   try{
    // Sequential within a sector bounds both network and GPU upload spikes.
    for(const [key,placements] of groups){if(sector.dead)break;if(placements[0].meadow){const grass=meadowTufts(placements,g);grass.userData.fullCount=placements.length;sector.grass??=[];sector.grass.push(grass);continue;}const id=placements[0].id,root=await acquireModel(id);if(sector.dead){releaseModel(id);break;}sector.refs.push(id);instanceModel(root,id,placements,placements[0].detail?sector.detail:g);await new Promise(resolve=>setTimeout(resolve,0));}
-   for(const spec of resourceLocations(c.cx,c.cz)){if(sector.dead)break;const root=await acquireModel(spec.model);if(sector.dead){releaseModel(spec.model);break;}sector.refs.push(spec.model);const mesh=new T.Group();instanceModel(root,spec.model,[{x:0,y:0,z:0,s:spec.type==='fiber'?.42:spec.type==='wood'?1.1:.22}],mesh);if(['crystal','ore','coal'].includes(spec.type)){mesh.traverse(o=>{if(!o.isMesh)return;const clone=m=>{const a=m.clone();a.color.set(spec.type==='crystal'?'#9acfd5':spec.type==='ore'?'#bb8962':'#424d54');if(spec.type==='crystal'){a.emissive.set('#3b747d');a.emissiveIntensity=.35;}return a;};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);o.userData.ownsMaterial=true;});}
-      mesh.position.set(spec.x,height(spec.x,spec.z),spec.z);g.add(mesh);const collider=w.collider(spec.x,spec.z,.4),resource={...spec,mesh,collider};sector.resources.push(resource);sector.colliders.push(collider);w.resources.push(resource);mesh.visible=!(this.state?.depleted[spec.id]>this.state?.day);collider.disabled=!mesh.visible;}
+   for(const spec of resourceLocations(c.cx,c.cz)){if(sector.dead)break;let mesh;if(spec.type==='crystal'){mesh=crystalCluster();}else{const root=await acquireModel(spec.model);if(sector.dead){releaseModel(spec.model);break;}sector.refs.push(spec.model);mesh=new T.Group();instanceModel(root,spec.model,[{x:0,y:0,z:0,s:spec.type==='fiber'?.42:spec.type==='wood'?1.1:.22}],mesh);if(['crystal','ore','coal'].includes(spec.type)){mesh.traverse(o=>{if(!o.isMesh)return;const clone=m=>{const a=m.clone();a.color.set(spec.type==='crystal'?'#9acfd5':spec.type==='ore'?'#bb8962':'#424d54');if(spec.type==='crystal'){a.emissive.set('#3b747d');a.emissiveIntensity=.35;}return a;};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);o.userData.ownsMaterial=true;});}
+      }mesh.position.set(spec.x,height(spec.x,spec.z),spec.z);g.add(mesh);const collider=w.collider(spec.x,spec.z,.4),resource={...spec,mesh,collider};sector.resources.push(resource);sector.colliders.push(collider);w.resources.push(resource);mesh.visible=!(this.state?.depleted[spec.id]>this.state?.day);collider.disabled=!mesh.visible;}
    sector.ready=true;
   }catch(error){this.failures.push(`${c.key}: ${error.message}`);console.error('Secteur indisponible',c.key,error);}finally{this.pending--;}
  }

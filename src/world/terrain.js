@@ -10,6 +10,6 @@ export function baseTerrainHeight(x,z){
 }
 export const onBridge=(x,z)=>x>=10&&x<=29&&(Math.abs(z-8)<2.4||Math.abs(z+30)<2.4);
 export function bridgeHeight(x,z){const c=Math.abs(z-8)<Math.abs(z+30)?8:-30,t=Math.max(0,Math.min(1,(x-10)/19));return baseTerrainHeight(10,c)*(1-t)+baseTerrainHeight(29,c)*t+Math.sin(t*Math.PI)*.6;}
-export function terrainHeight(x,z){let h=baseTerrainHeight(x,z);const d=Math.hypot(x-PLAN.arena.x,z-PLAN.arena.z);if(d<15)h=baseTerrainHeight(PLAN.arena.x,PLAN.arena.z);return onBridge(x,z)?Math.min(h,bridgeHeight(x,z)-.2):h;}
+export function terrainHeight(x,z){let h=baseTerrainHeight(x,z);const d=Math.hypot(x-PLAN.arena.x,z-PLAN.arena.z);if(d<15)h=baseTerrainHeight(PLAN.arena.x,PLAN.arena.z);for(const [lx,lz,r] of [[465,-374,24],[260,-200,22]]){const d=Math.hypot(x-lx,z-lz),t=Math.max(0,Math.min(1,(r+12-d)/12));h=h*(1-t)+baseTerrainHeight(lx,lz)*t;}return onBridge(x,z)?Math.min(h,bridgeHeight(x,z)-.2):h;}
 export const height=(x,z)=>onBridge(x,z)?bridgeHeight(x,z):terrainHeight(x,z);
-export const clearLandmark=(x,z)=>Math.hypot(x-PLAN.arena.x,z-PLAN.arena.z)<17||Math.hypot(x-PLAN.plaza.x,z-PLAN.plaza.z)<16||onBridge(x,z);
+export const clearLandmark=(x,z)=>Math.hypot(x-PLAN.arena.x,z-PLAN.arena.z)<17||Math.hypot(x-PLAN.plaza.x,z-PLAN.plaza.z)<16||Math.hypot(x-465,z+374)<36||Math.hypot(x-260,z+200)<34||onBridge(x,z);

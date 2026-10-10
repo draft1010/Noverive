@@ -1,3 +1,4 @@
+import {PLAN} from '../world/plan.js';
 // Additive content: existing save identifiers keep their original meaning.
 export const CROPS = {
   seed: { name: 'Roselle', item: 'crop', seconds: 84, color: '#cf7b97' },
@@ -200,7 +201,7 @@ export function furnitureBlocks(b,x,z,r=.4,y=0,location='world') {
 export function stationAvailable(s,station) {
  if(!station) return true;
  const loc=s.location||'world';
- if(station==='workbench' && loc==='world' && Math.hypot(s.player.x+40,s.player.z-32)<4) return true;
+ if(station==='workbench' && loc==='world' && Math.hypot(s.player.x-PLAN.workshop.x,s.player.z-PLAN.workshop.z)<4) return true;
  return s.buildings.some(b=>b.type===station && spaceOf(b)===loc && Math.abs((b.y||0)-(s.player.y||0))<1 && Math.hypot(b.x-s.player.x,b.z-s.player.z)<4);
 }
 export function transfer(s,b,id,count,toChest) {

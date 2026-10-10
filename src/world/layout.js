@@ -85,8 +85,14 @@ export function sectorLayout(cx,cz){
   const flower=i%17===0,id=flower?'EA_M_Env_Flower_01a_PRE':'EA_M_Env_Grass_01a_PRE';
   const p=put(id,x,z,flower?.28:.12+hash(cx,cz,i+63)*.09,hash(cx,cz,i+15)*6.28,false,false);if(p&&!flower)p.meadow=true;
  }
- // Rock cavern: vaulted pieces follow the new mountain contour, keeping the corridor open.
- for(const x of [465,475,485]){for(const z of [-357,-343])put('EA01_Env_Clif_01a',x,z,.65,Math.PI/2);const roof=put('EA01_Env_Clif_01b',x,-350,.8,0,false);if(roof){roof.y+=6.5;roof.sy=.12;roof.sx=.8;roof.sz=.8;}}
+ // A wide doorway faces the mountain trail; walls and roof sit entirely off the road.
+ for(const z of [-367,-377,-387]){
+  for(const x of [455,475])put('EA01_Env_Clif_01a',x,z,.65,Math.PI/2);
+  const roof=put('EA01_Env_Clif_01b',465,z,.75,0,false);if(roof){roof.y+=6;roof.sy=.16;roof.sx=1.3;roof.sz=.9;}
+ }
+ put('EA01_Env_Clif_01a',465,-394,.8);
+ // Working quarry, with an open western entrance and a broad central aisle.
+ for(const [x,z] of [[245,-216],[259,-222],[275,-216],[283,-202],[275,-184],[259,-179],[245,-184]])put('EA01_Env_Clif_01a',x,z,.65,0);
  const region=biomeAt(cx*32+16,cz*32+16),natural=region.id!=='downtown';
  if(region.id==='forest'){const x=cx*32+16,z=cz*32+16;if(!reserve(x,z))put('SM_Tree_F_1',x,z,1,hash(cx,cz)*6.28,false,true);}
  const trees=['forest','wild'].includes(region.id)?24:['farm','suburb'].includes(region.id)?7:region.id==='lake'?8:4;
@@ -100,7 +106,8 @@ export function sectorLayout(cx,cz){
  }
  if(['quarry','mountain','cave','lake','wild'].includes(region.id))for(let i=0;i<12;i++){const x=cx*32+hash(cx,cz,i+181)*32,z=cz*32+hash(cx,cz,i+219)*32;if(reserve(x,z)||height(x,z)<0)continue;put(i<2?'EA01_Env_Clif_01a':'EA01_Env_Rock_01b',x,z,i<2?.8+hash(cx,cz,i)*.7:.2+hash(cx,cz,i)*.45,hash(cx,cz,i+303)*6.28,i<5,i>=5);}
  for(let i=0;i<4;i++){const x=cx*32+4+hash(cx,cz,i+801)*24,z=cz*32+4+hash(cx,cz,i+901)*24,bio=biomeAt(x,z);if(reserve(x,z)||height(x,z)<0)continue;const type=bio.resources[i%bio.resources.length];resources.push({id:`v2:${key}:${i}`,type,x,z,model:type==='scrap'?'Box_1':type==='wood'?'TreeTrunk_1_1_A':type==='fiber'?'EA_M_Env_Bush_BerryDome_01a_PRE':'EA01_Env_Rock_01c'});}
- for(const [i,x,z] of [[0,466,-349],[1,476,-349],[2,485,-351]])if(chunkKey(x,z)===key)resources.push({id:`v2:cave:${i}`,type:'crystal',x,z,model:'EA01_Env_Rock_01c'});
+ for(const [i,x,z] of [[0,462,-363],[1,468,-371],[2,462,-379],[3,468,-386]])if(chunkKey(x,z)===key)resources.push({id:`v2:cave:${i}`,type:'crystal',x,z,model:'EA01_Env_Rock_01c'});
+ for(const [i,x,z,type] of [[0,251,-208,'stone'],[1,262,-210,'ore'],[2,270,-203,'coal'],[3,261,-190,'ore']])if(chunkKey(x,z)===key)resources.push({id:'v3:quarry:'+i,type,x,z,model:'EA01_Env_Rock_01c'});
  const result={models,colliders,resources};layouts.set(key,result);if(layouts.size>512)layouts.delete(layouts.keys().next().value);return result;
 }
 export function staticCollision(x,z,r=.4,cameraY=null){for(let cx=Math.floor((x-28)/32);cx<=Math.floor((x+28)/32);cx++)for(let cz=Math.floor((z-28)/32);cz<=Math.floor((z+28)/32);cz++)for(const c of sectorLayout(cx,cz).colliders)if((cameraY===null||(cameraY>c.y-.2&&cameraY<c.y+c.height+.1))&&(c.kind==='rect'?(Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r):Math.hypot(x-c.x,z-c.z)<c.r+r))return true;return false;}

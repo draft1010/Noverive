@@ -45,7 +45,7 @@ export function buildModernWorld(w){
 export function populateModernPeople(w){
  const people=[['Maëlle','Accueil des Horizons',-24,19],['Soline','Commerçante des Halles',-78,28],['Orin','Commerçant de semences',-62,32],['Ivo','Chercheur de résonance',-14,25],['Noé','Voisin des Vergers',-108,167],['Tess','Architecte du domaine',-114,178],['Ysée','Exploratrice',-12,30],['Alba','Voyageuse',-32,38]];
  for(let i=0;i<32;i++){const x=-54-(i%8)*48,z=-18-Math.floor(i/8)*48;people.push([['Lina','Sam','Milo','Nora','Jules','Aya','Lou','Eden'][i%8]+` ${Math.floor(i/8)+1}`,i%7===0?'Commerçant des Horizons':'Habitant des Horizons',x,z]);}
- people.forEach(([name,role,x,z],i)=>{if(w.collides(x,z,.4)){for(let k=1;k<12;k++)if(!w.collides(x+k*.5,z,.4)){x+=k*.5;break;}}const mesh=modernCharacter(i%8+1);mesh.position.set(x,height(x,z),z);w.scene.add(mesh);const route=[{x,z},{x,z:z+5},{x:x+3,z:z+5},{x,z}].filter(p=>!w.collides(p.x,p.z,.4));w.npcs.push({name,role,x,z,homeX:x,homeZ:z,mesh,phase:i,route});});
+ people.forEach(([name,role,x,z],i)=>{if(w.collides(x,z,.4)){for(let k=1;k<12;k++)if(!w.collides(x+k*.5,z,.4)){x+=k*.5;break;}}const mesh=modernCharacter(({Maëlle:2,Soline:3,Tess:2,Ysée:3,Alba:2})[name]??(i%8+1));mesh.position.set(x,height(x,z),z);w.scene.add(mesh);const route=[{x,z},{x,z:z+5},{x:x+3,z:z+5},{x,z}].filter(p=>!w.collides(p.x,p.z,.4));w.npcs.push({name,role,x,z,homeX:x,homeZ:z,mesh,phase:i,route});});
 }
 export function populateModernWild(w){
  for(let i=0;i<34;i++){const e=chooseEncounter(w.rand,w.collides.bind(w),w.wild,null,PLAN.spawn);if(!e)continue;const mesh=modelCreature(species(e.id),1);mesh.position.set(e.x,height(e.x,e.z),e.z);w.scene.add(mesh);w.wild.push({...e,mesh,index:i,cooldown:0});}

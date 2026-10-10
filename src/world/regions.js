@@ -8,7 +8,7 @@ export const REGIONS=[
  {id:'lake',name:'Lac des Reflets',x:410,z:280,color:'#96ad7c',species:['calamaree','ondril','rainette','coralys'],resources:['fiber'],level:4},
  {id:'quarry',name:'Carrière des Roches Claires',x:260,z:-200,color:'#a99881',species:['sorbel','rocogre','galetis','brasile','dracendre'],resources:['stone','ore','coal'],level:5},
  {id:'mountain',name:'Massif du Levant',x:650,z:-550,color:'#929b8b',species:['astrel','nivours','alizelle','galetis'],resources:['stone','ore'],level:7},
- {id:'cave',name:'Grotte de Résonance',x:465,z:-350,color:'#918888',species:['noctile','lumignon','dracendre','galetis'],resources:['crystal','coal','ore'],level:8},
+ {id:'cave',name:'Grotte de Résonance',x:465,z:-374,color:'#918888',species:['noctile','lumignon','dracendre','galetis'],resources:['crystal','coal','ore'],level:8},
  {id:'wild',name:'Réserve des Lointains',x:650,z:650,color:'#66804e',species:['fulgurin','dinosylve','germousse','dracendre','alizelle','coralys'],resources:['wood','crystal'],level:9},
 ];
 export function biomeAt(x,z){let id=inCity(x,z)?'downtown':x<5?(z<155?'suburb':'farm'):'forest';if(x>170&&z<-100)id='quarry';if(x>380&&z<-390)id='mountain';if(Math.hypot(x-PLAN.cave.x,z-PLAN.cave.z)<62)id='cave';if(Math.hypot((x-410)/1.25,z-280)<125)id='lake';if(x>430&&z>470)id='wild';return REGIONS.find(r=>r.id===id);}
@@ -21,9 +21,11 @@ export function roadAt(x,z){
  if(x>=-100&&x<=-60&&Math.abs(z-120)<3.8)return 'country';
  if(z>=120&&Math.abs(x+64)<3.8)return 'country';
  if(x>28&&Math.abs(x-(180+Math.sin(z*.006)*38))<2.2)return 'trail';
- if(x>170&&x<740&&Math.abs(z+350)<2.2)return 'trail';
+ if(x>140&&x<740&&Math.abs(z+350)<2.2)return 'trail';
  if(x>180&&x<430&&Math.abs(z-280)<2.2)return 'trail';
  if(x>-130&&x<-68&&Math.abs(z-168)<2)return 'trail';
+ if(x>140&&x<261&&Math.abs(z+200)<2.2)return 'trail';
+ if(z<-348&&z>-360&&Math.abs(x-465)<2.2)return 'trail';
  return null;
 }
 export const isFarm=(x,z)=>x>PLAN.farm.left&&x<PLAN.farm.right&&z>PLAN.farm.top&&z<PLAN.farm.bottom;

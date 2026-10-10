@@ -335,6 +335,11 @@ export const QUESTS = [
     test: (s) => s.stats.planted >= 3 && s.stats.watered >= 3,
   },
   {
+    title: "Un lit pour la première nuit",
+    text: "À l’atelier du domaine, fabriquez un lit en bois (6 planches et 3 toiles). Entrez chez vous, ouvrez Bâtir et placez votre lit. Les matériaux vous sont offerts après les plantations.",
+    test: (s) => !!s.flags.craftedSleepingBed && !!s.flags.placedSleepingBed,
+  },
+  {
     title: "Une nouvelle amitié",
     text: "Explorez la clairière, affaiblissez une créature et tissez un lien de résonance.",
     test: (s) => s.stats.captured >= 1 || s.team.length >= 2,
@@ -373,7 +378,7 @@ export const LANDMARKS = [
  {id:'downtown',name:'Métropole des Horizons',x:-240,z:-168},
  {id:'lake',name:'Lac des Reflets',x:292,z:280},
  {id:'mountain',name:'Massif du Levant',x:650,z:-550},
- {id:'cave',name:'Grotte de Résonance',x:465,z:-350},
+ {id:'cave',name:'Grotte de Résonance',x:465,z:-374},
  {id:'wild',name:'Réserve des Lointains',x:650,z:650},
  {id:'city',name:'Place des Horizons',x:-24,z:24},
  {id:'home',name:'Votre domaine',x:-96,z:185},

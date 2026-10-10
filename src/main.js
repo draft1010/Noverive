@@ -470,7 +470,6 @@ function ensurePlots() {
     {type:'table',x:-1,z:0,y:0,r:0,location:'home'},
     {type:'chair',x:-1,z:2,y:0,r:0,location:'home'},
     {type:'chest',x:3,z:-5,y:0,r:0,location:'home',storage:{}},
-    {type:'sleepingBed',x:-5,z:-4,y:3.6,r:0,location:'home'},
     {type:'wardrobe',x:-7,z:-6,y:3.6,r:0,location:'home',storage:{}}
   );}
   if (!state.plots.length)
@@ -618,7 +617,7 @@ function renderToolbelt() {
     (b) => (b.onclick = () => selectTool(b.dataset.tool)),
   );
 }
-const QUEST_TARGETS = ["city", "home", "forest", "home", "home", "ruins", null];
+const QUEST_TARGETS = ["city", "home", "home", "forest", "home", "home", "ruins", null];
 
 function currentQuestIndex() {
   const raw = Number(state?.quest);
@@ -666,7 +665,7 @@ function updateObjectiveTracker() {
   if (text) text.textContent = q?.text || "Poursuivez votre aventure dans les Jardins.";
   if (progress) progress.style.width = `${(qi / Math.max(1, QUESTS.length - 1)) * 100}%`;
 
-  const targetId = QUEST_TARGETS[qi];
+  const targetId = state.flags.marker || QUEST_TARGETS[qi];
   const target = targetId ? LANDMARKS.find((l) => l.id === targetId) : null;
   const direction = $("questDirection"), arrow = $("questArrow"), place = $("questPlace"), distance = $("questDistance");
   if (!direction || !arrow || !place || !distance) return;
@@ -711,15 +710,7 @@ function updateHUD() {
 }
 function questCheck() {
   if (advanceQuest(state)) {
-    state.flags.marker = [
-      "city",
-      "home",
-      "forest",
-      "home",
-      "home",
-      "ruins",
-      "home",
-    ][state.quest];
+    state.flags.marker = QUEST_TARGETS[state.quest];
     toast("Étape accomplie · +35 ambres · Votre carnet a été mis à jour.");
     audio.play("capture");
     updateHUD();
@@ -1038,8 +1029,8 @@ function openMenu(tab = modalTab) {
   if (tab === "craft") html = craftView(state, craftCanAfford, craftAvailable, craftOutputFits);
   if (tab === "build") html = gardenView(state);
   if (tab === "map")
-    html = `<div class="menu-lead"><div><span class="section-kicker">RÉGION DE NOVERIVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu découvert pour y poser votre repère.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
-      (l) => state.discovered.includes(l.id),
+    html = `<div class="menu-lead"><div><span class="section-kicker">RÉGION DE NOVERIVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu pour suivre la flèche du repère. Pour la carrière et la grotte, traversez le pont à l’est de la ville puis suivez le sentier vers le nord. Les cristaux se récoltent avec la pioche.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
+      (l) => state.discovered.includes(l.id) || ["cave","quarry"].includes(l.id),
     )
       .map((l) => `<button data-mark="${l.id}"><span>◇</span>${l.name}</button>`)
       .join(
@@ -1179,9 +1170,11 @@ function openMenu(tab = modalTab) {
     document.querySelectorAll("[data-mark]").forEach(
       (b) =>
         (b.onclick = () => {
-          state.flags.marker = b.dataset.mark;
+          state.flags.marker = state.flags.marker===b.dataset.mark ? null : b.dataset.mark;
+          persist();
+          updateObjectiveTracker();
           drawMap($("largeMap"));
-          toast("Repère ajouté à votre carte.");
+          toast(state.flags.marker ? "Suivez la flèche du repère. Cliquez à nouveau sur ce lieu pour reprendre la mission." : "Guidage vers votre mission rétabli.");
         }),
     );
   }
@@ -1345,6 +1338,7 @@ function placeBuilding() {
   const placed={type,x,z,r,location:state.location||'world',y:interior?((state.player.y||0)>3.3?3.6:0):0};
   if(building.movingIndex>=0)Object.assign(state.buildings[building.movingIndex],placed);
   else {if (!spend(state, { [type]: 1 })) return; state.buildings.push(placed);}
+  if(type==='sleepingBed' && state.flags.craftedSleepingBed && state.location==='home')state.flags.placedSleepingBed=true;
   persist();
   syncWorld();
   world.burst(x, surfaceHeight(x, z) + 0.7, z);
@@ -1372,10 +1366,10 @@ function drawMap(c) {
  patch(650,-650,500,390,'#b7c0b9');patch(300,-210,180,130,'#c6bba8');patch(530,530,460,480,'#abc8ad');patch(-470,490,500,400,'#c9d8ae');patch(410,280,100,80,'#73b2c3');
  const city=pt(-768,-576);g.fillStyle='#e6e9e6';g.fillRect(city[0],city[1],768*scale,672*scale);
  g.strokeStyle='#73b2c3';g.lineWidth=Math.max(1,9*scale);g.beginPath();for(let z=-1024;z<=1024;z+=8){const p=pt(riverX(z),z);z===-1024?g.moveTo(...p):g.lineTo(...p);}g.stroke();
- g.strokeStyle='#899b9c';g.lineWidth=Math.max(.65,4*scale);for(const [x,z,xx,zz] of [...CITY_X.map(x=>[x,-576,x,96]),...CITY_Z.map(z=>[-768,z,0,z]),[0,8,820,8],[-96,96,-96,900],[170,-350,740,-350],[180,280,410,280]]){g.beginPath();g.moveTo(...pt(x,z));g.lineTo(...pt(xx,zz));g.stroke();}
+ g.strokeStyle='#899b9c';g.lineWidth=Math.max(.65,4*scale);for(const [x,z,xx,zz] of [...CITY_X.map(x=>[x,-576,x,96]),...CITY_Z.map(z=>[-768,z,0,z]),[0,8,820,8],[-96,96,-96,900],[140,-350,740,-350],[140,-200,260,-200],[465,-350,465,-360],[180,280,410,280]]){g.beginPath();g.moveTo(...pt(x,z));g.lineTo(...pt(xx,zz));g.stroke();}
  g.strokeStyle='#a89878';g.lineWidth=Math.max(.8,2*scale);g.beginPath();for(let z=-900;z<=900;z+=12){const p=pt(180+Math.sin(z*.006)*38,z);z===-900?g.moveTo(...p):g.lineTo(...p);}g.stroke();
  g.textAlign='center';g.font='10px system-ui';if(large)for(const r of REGIONS){const [x,y]=pt(r.x,r.z);g.fillStyle='#334f53';g.fillText(r.name.split(' • ')[0],x,y-12);}
- if(!interior)for(const l of LANDMARKS){if(!state.discovered.includes(l.id)&&l.id!==state.flags.marker)continue;const [x,y]=pt(l.x,l.z);g.fillStyle=l.id===state.flags.marker?'#d89b40':'#537d7e';g.beginPath();g.arc(x,y,large?4:3,0,Math.PI*2);g.fill();}
+ if(!interior)for(const l of LANDMARKS){if(!state.discovered.includes(l.id)&&l.id!==state.flags.marker&&!['cave','quarry'].includes(l.id))continue;const [x,y]=pt(l.x,l.z);g.fillStyle=l.id===state.flags.marker?'#d89b40':'#537d7e';g.beginPath();g.arc(x,y,large?4:3,0,Math.PI*2);g.fill();}
  const [px,py]=pt(state.player.x,state.player.z);g.fillStyle='#1e6571';g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(px,py,large?5:4,0,Math.PI*2);g.fill();g.stroke();g.fillStyle='#34545d';g.font='bold 10px system-ui';g.fillText('N',w-20,20);if(large)g.fillText('NOVERIVE · ATLAS DES HORIZONS',w/2,22);
 }
 function startBattle(w) {

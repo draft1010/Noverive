@@ -1,4 +1,4 @@
-const CACHE = "noverive-v70-graphics";
+const CACHE = "noverive-v71-exploration";
 const FILES = [
   "./",
   "./index.html",
