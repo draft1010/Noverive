@@ -7,6 +7,11 @@ import {
 } from "../systems/data.js";
 import { creaturePortrait3D } from "./creature-preview.js";
 const drawings = {
+ car:'<path fill="#67a9b9" d="M18 65l10-24h47l19 22 12 4v22H15V69z"/><path fill="#c3edf0" d="m35 46-7 17h52L69 46z"/><circle fill="#334a50" cx="34" cy="88" r="12"/><circle fill="#334a50" cx="85" cy="88" r="12"/>',
+ carWheel:'<circle fill="#334a50" cx="60" cy="60" r="36"/><circle fill="#a6bdba" cx="60" cy="60" r="22"/><circle fill="#546a70" cx="60" cy="60" r="8"/><path d="M60 38v44M38 60h44"/>',
+ carFrame:'<path fill="#91a8b3" d="m22 34 66-8 13 58-64 13z"/><path fill="#e2efdc" d="m33 44 46-6 9 36-45 10z"/><path d="m38 58 44-7m-39 21 43-8"/>',
+ carMotor:'<path fill="#5e898f" d="M25 38h63v48H25z"/><path fill="#acd9ca" d="M37 27h37v18H37z"/><path fill="#e9bd65" d="m60 44-15 21h16l-8 18 25-28H63l8-11z"/>',
+
   wood: '<path fill="#986845" d="m22 50 39-22 39 24-39 25z"/><path fill="#bc895a" d="M22 50v24l39 22V77z"/><path fill="#79533e" d="m61 77 39-25v23L61 96z"/><ellipse fill="#e1bb83" cx="41" cy="68" rx="16" ry="11" transform="rotate(30 41 68)"/><ellipse fill="none" cx="41" cy="68" rx="9" ry="6" transform="rotate(30 41 68)"/><path d="m62 43 24 12m-30-5 18 10"/>',
   stone:
     '<path fill="#879b99" d="m20 75 8-29 30-18 30 9 16 39-27 16-37-2z"/><path fill="#c3cebc" d="m28 46 30-18 14 28-29 12z"/><path fill="#657b82" d="m72 56 16-19 16 39-27 16z"/><path fill="none" d="m43 68-3 22m3-22 29-12 5 36"/>',

@@ -8,7 +8,7 @@ export const CROPS = {
   flaxSeed: { name: 'Lin', item: 'flax', seconds: 125, color: '#9eabd8' },
   pumpkinSeed: { name: 'Courge', item: 'pumpkin', seconds: 155, color: '#d7a14f' },
 };
-export const BUILDABLES = ['sofa','lamp','fence','bench','bed','workbench','sleepingBed','chest','furnace','table','chair','shelf','rug','stove','wardrobe','composter'];
+export const BUILDABLES = ['car','sofa','lamp','fence','bench','bed','workbench','sleepingBed','chest','furnace','table','chair','shelf','rug','stove','wardrobe','composter'];
 export const BAG_SLOTS = 24;
 export const STORAGE_SLOTS = { chest: 30, shelf: 18, wardrobe: 24 };
 export function stackLimit(id) {
@@ -165,8 +165,12 @@ export function addToContainer(container,id,count,capacity=BAG_SLOTS) {
   return true;
 }
 export function storageCapacity(type) { return STORAGE_SLOTS[type] || 0; }
-export const LABELS = { sofa:'Canapé', wheatSeed:'Graines de blé', carrotSeed:'Graines de carotte', flaxSeed:'Graines de lin', pumpkinSeed:'Graines de courge', wheat:'Blé', carrot:'Carottes', flax:'Lin', pumpkin:'Courges', ore:'Minerai de fer', coal:'Charbon', iron:'Lingots de fer', cloth:'Toile de lin', flour:'Farine', bread:'Pain', stew:'Ragoût du jardin', grilledFish:'Poisson grillé', sleepingBed:'Lit en bois', chest:'Coffre', furnace:'Fonderie', table:'Table', chair:'Chaise', shelf:'Étagère', rug:'Tapis tissé', stove:'Four de cuisine', wardrobe:'Armoire', composter:'Composteur' };
+export const LABELS = { car:'Voiture des Horizons',carWheel:'Roue renforcée',carFrame:'Châssis automobile',carMotor:'Moteur à résonance', sofa:'Canapé', wheatSeed:'Graines de blé', carrotSeed:'Graines de carotte', flaxSeed:'Graines de lin', pumpkinSeed:'Graines de courge', wheat:'Blé', carrot:'Carottes', flax:'Lin', pumpkin:'Courges', ore:'Minerai de fer', coal:'Charbon', iron:'Lingots de fer', cloth:'Toile de lin', flour:'Farine', bread:'Pain', stew:'Ragoût du jardin', grilledFish:'Poisson grillé', sleepingBed:'Lit en bois', chest:'Coffre', furnace:'Fonderie', table:'Table', chair:'Chaise', shelf:'Étagère', rug:'Tapis tissé', stove:'Four de cuisine', wardrobe:'Armoire', composter:'Composteur' };
 export const EXTRA_RECIPES = [
+ ['carWheel','Roue renforcée',{iron:1,fiber:4},1,'Fabriquez quatre roues pour votre voiture.','workbench'],
+ ['carFrame','Châssis automobile',{iron:6,plank:4},1,'La structure de votre voiture.','workbench'],
+ ['carMotor','Moteur à résonance',{iron:4,crystal:3},1,'Un moteur alimenté par les cristaux, sans carburant.','workbench'],
+ ['car','Voiture des Horizons',{carFrame:1,carMotor:1,carWheel:4,cloth:2},1,'Placez-la sur un sol libre, partout dehors. Interagissez pour monter, puis conduisez au clavier ou au joystick.','workbench'],
  ['sofa','Canapé contemporain',{plank:5,cloth:4},1,'Un canapé confortable pour le salon.','workbench'],
  ['coal','Charbon de bois',{wood:3},2,'Combustible pour la fonderie.'],
  ['iron','Lingot de fer',{ore:3,coal:1},1,'Le minerai fond au feu du charbon.','furnace'],
@@ -191,7 +195,8 @@ export const FOOD = {bread:18,stew:45,grilledFish:30};
 export const spaceOf = b => b.location || 'world';
 export function footprint(type, r=0) {
  // Placement footprints mirror the visible meshes so furniture can sit truly flush to walls.
- const size={sofa:[2,1.65],sleepingBed:[1.85,2.5],chest:[1.7,1],furnace:[1.6,1.2],table:[2.4,1.5],chair:[.8,.8],shelf:[2,.65],rug:[2.8,2],stove:[1.6,1.2],wardrobe:[1.7,1],composter:[1.5,1.5],lamp:[.5,.5],fence:[1.9,.3],bed:[1.8,1],workbench:[1.9,.8],bench:[1.9,.8]}[type]||[1.9,1];
+ const size={car:[1.8,3.7],sofa:[2,1.65],sleepingBed:[1.85,2.5],chest:[1.7,1],furnace:[1.6,1.2],table:[2.4,1.5],chair:[.8,.8],shelf:[2,.65],rug:[2.8,2],stove:[1.6,1.2],wardrobe:[1.7,1],composter:[1.5,1.5],lamp:[.5,.5],fence:[1.9,.3],bed:[1.8,1],workbench:[1.9,.8],bench:[1.9,.8]}[type]||[1.9,1];
+ if(type==='car')return [Math.abs(Math.cos(r))*size[0]+Math.abs(Math.sin(r))*size[1],Math.abs(Math.sin(r))*size[0]+Math.abs(Math.cos(r))*size[1]];
  return Math.abs(Math.sin(r))>.5?[size[1],size[0]]:size;
 }
 export function furnitureBlocks(b,x,z,r=.4,y=0,location='world') {

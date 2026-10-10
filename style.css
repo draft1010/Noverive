@@ -4582,3 +4582,5 @@ button.primary,.primary{background:#197c79;color:white;border-color:transparent;
 }
 /* Eco keeps overlays inexpensive while the 3D scene is moving underneath. */
 body[data-graphics="low"] #hud *,body[data-graphics="low"] #modal *,body[data-graphics="low"] #battle *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+#drivingHud{position:fixed;top:84px;right:18px;width:240px;padding:12px 20px;background:#143c45eb;color:#fff;border:1px solid #9fd0c3;border-radius:18px;z-index:15;font:600 13px system-ui;max-width:80vw;text-align:center;pointer-events:none}body.driving #toolbelt{display:none!important}.touch #drivingHud{top:66px;right:12px;width:170px;max-width:30vw;font-size:11px;padding:8px}

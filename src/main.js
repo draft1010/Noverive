@@ -1,3 +1,6 @@
+import {driveVehicle,vehicleExit} from './systems/vehicles.js';
+import {carModel,VehicleFleet} from './rendering/vehicles.js';
+import {waterDepth} from './world/terrain.js';
 import {PLAYER_RADIUS,slideMove} from './world/collision.js';
 import {Presentation} from './rendering/presentation.js';
 import {GRAPHICS,graphicsProfile,renderRatio,AdaptiveResolution,FramePacer} from './rendering/graphics.js';
@@ -131,6 +134,9 @@ const skyAtmosphere=atmosphere(scene), contacts=contactShadows(scene), adaptive=
 let graphics=graphicsProfile("low"),  shadowElapsed=0;
 const world = new World(scene),
   audio = new AudioGarden();
+const vehicleFleet=new VehicleFleet(scene);
+let driving=null;
+const drivingHud=document.createElement('div');drivingHud.id='drivingHud';drivingHud.hidden=true;document.body.append(drivingHud);
 let state = newState(),
   started = false,
   tool = "hand",
@@ -163,7 +169,7 @@ prepareOccluders(scene);
 const currentScene = () => interior?.scene || scene;
 const surfaceHeight = (x,z) => interior ? indoorHeight(x,z,state.player.y||0) : height(x,z);
 const solidAt = (x,z,r=PLAYER_RADIUS) => interior ? interior.collides(x,z,r,state.player.y||0) : world.collides(x,z,r);
-const placementSolidAt = (x,z,r=.12) => interior ? (indoorPlacementCollision(x,z,r,state.player.y||0)||interior.fixedColliders.some(c=>Math.abs((state.player.y||0)-c.y)<1&&Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r)) : world.collides(x,z,r);
+const placementSolidAt = (x,z,r=.12) => interior ? (indoorPlacementCollision(x,z,r,state.player.y||0)||interior.fixedColliders.some(c=>Math.abs((state.player.y||0)-c.y)<1&&Math.abs(x-c.x)<c.w/2+r&&Math.abs(z-c.z)<c.d/2+r)) : world.collides(x,z,r)||(building?.type==='car'&&(waterDepth(x,z)>.12||world.npcs.some(n=>Math.hypot(n.x-x,n.z-z)<r+.3)));
 const snapPlacement = (value,type) => { const step=(interior||type==='fence')?.1:1; return Math.round(value/step)*step; };
 const fenceEnds=(x,z,r)=>{const hx=Math.cos(r)*.95,hz=-Math.sin(r)*.95;return [{x:x+hx,z:z+hz},{x:x-hx,z:z-hz}];};
 function refinePlacement(x,z,type,r=0,movingIndex=-1){
@@ -186,9 +192,23 @@ function refinePlacement(x,z,type,r=0,movingIndex=-1){
  }
  return {x,z};
 }
-function syncWorld() { world.sync({...state,buildings:state.buildings.filter(b=>spaceOf(b)==='world')}); interior?.sync(state); }
+function syncWorld() { world.sync({...state,buildings:state.buildings.filter(b=>spaceOf(b)==='world'&&b.type!=='car')}); interior?.sync(state); vehicleFleet.sync(state.buildings,height,!interior); }
+function carObstacle(car,x,z,r){return world.collides(x,z,r)||waterDepth(x,z)>.12||state.buildings.some(b=>b!==car&&furnitureBlocks(b,x,z,r,0,'world'))||world.npcs.some(n=>Math.hypot(n.x-x,n.z-z)<r+.3)||state.plots.some(p=>Math.abs(p.x-x)<1.1+r&&Math.abs(p.z-z)<1.1+r);}
+function toggleCar(car){
+ if(driving){
+  driving.speed=0;
+  const exit=vehicleExit(driving,(x,z,r)=>world.collides(x,z,r)||state.buildings.some(b=>furnitureBlocks(b,x,z,r,0,'world')));
+  if(!exit)return toast('Les portières sont bloquées. Avancez vers un espace dégagé.');
+  Object.assign(state.player,exit,{y:0});driving=null;player.visible=companion.visible=true;drivingHud.hidden=true;document.body.classList.remove('driving');input.running=false;
+  player.position.set(exit.x,height(exit.x,exit.z),exit.z);companion.position.copy(player.position);persist();return true;
+ }
+ if(interior||!car||car.type!=='car'||Math.hypot(car.x-state.player.x,car.z-state.player.z)>3.4)return toast('Approchez-vous de la voiture pour monter.');
+ closeModal();cancelBuild();driving=car;car.speed=0;input.target=null;input.route=[];player.visible=companion.visible=false;drivingHud.hidden=false;document.body.classList.add('driving');input.running=false;
+ Object.assign(state.player,{x:car.x,z:car.z,y:0});toast('Au volant · Z/S avancer/reculer · Q/D tourner · Maj freiner · E descendre. Joystick sur téléphone.');return true;
+}
 function sceneTransition(){const veil=document.createElement('div');veil.className='scene-transition';document.body.append(veil);veil.addEventListener('animationend',()=>veil.remove(),{once:true});}
 function enterHome(location='home') {
+ if(driving)return toast('Descendez de la voiture avant d’entrer.');
  sceneTransition();
  cancelBuild();closeModal();input.target=null;input.route=[];
  state.outdoorPlayer={...state.player};state.location=location;
@@ -343,9 +363,11 @@ function bindInventoryDragDrop(storage = null, storageIndex = -1) {
 }
 
 function furnishingMenu(index) {
+ if(driving)return;
  const b=state.buildings[index];if(!b)return;
  const storage=['chest','shelf','wardrobe'].includes(b.type);
- showModal(`<span class="eyebrow">AMÉNAGEMENT</span><h2>${ITEMS[b.type]}</h2><div class="card-actions"><button id="moveObject">Déplacer / tourner</button><button id="recoverObject">Récupérer</button>${b.type==='sleepingBed'?'<button id="restMorning">Jusqu’au matin</button><button id="restEvening">Jusqu’au soir</button>':''}${['workbench','furnace','stove','composter'].includes(b.type)?'<button id="useStation">Fabriquer ici</button>':''}</div>${storage?storageView(state,b):''}`);
+ showModal(`<span class="eyebrow">AMÉNAGEMENT</span><h2>${ITEMS[b.type]}</h2><div class="card-actions">${b.type==='car'?'<button id="driveCar">Monter et conduire</button>':''}<button id="moveObject">Déplacer / tourner</button><button id="recoverObject">Récupérer</button>${b.type==='sleepingBed'?'<button id="restMorning">Jusqu’au matin</button><button id="restEvening">Jusqu’au soir</button>':''}${['workbench','furnace','stove','composter'].includes(b.type)?'<button id="useStation">Fabriquer ici</button>':''}</div>${storage?storageView(state,b):''}`);
+ if($('driveCar'))$('driveCar').onclick=()=>toggleCar(b);
  $('moveObject').onclick=()=>startBuild(b.type,index);
  $('recoverObject').onclick=()=>{if(!recover(state,index))return toast('Videz le rangement et libérez une case dans le sac.');syncWorld();persist();closeModal();};
  if($('useStation'))$('useStation').onclick=()=>openMenu('craft');
@@ -396,7 +418,7 @@ input.onGround = (sx, sy) => {
   }
 };
 input.onObject=(sx,sy)=>{
- if(!started||battle||building||!$('modal').hidden)return false;
+ if(!started||battle||driving||building||!$('modal').hidden)return false;
  raycaster.setFromCamera({x:sx/innerWidth*2-1,y:1-sy/innerHeight*2},camera);
  const hit=raycaster.intersectObjects(interior ? interior.furniture.children : world.buildMeshes,true)[0];
  if(!hit)return false;let root=hit.object;while(root&&!root.userData.building)root=root.parent;
@@ -457,7 +479,8 @@ function closeModal() {
 }
 function persist(show = false) {
   try {
-    save(state);
+    const parked=driving?vehicleExit(driving,(x,z,r)=>world.collides(x,z,r)||state.buildings.some(b=>furnitureBlocks(b,x,z,r,0,'world'))):null;
+    save(parked?{...state,player:{...parked,y:0}}:state);
     if (show) toast("Votre voyage est sauvegardé sur cet appareil.");
   } catch {
     toast(
@@ -516,6 +539,7 @@ async function requestGameFullscreen() {
 }
 
 function begin(s) {
+ driving=null;drivingHud.hidden=true;document.body.classList.remove('driving');s.buildings.forEach(b=>{if(b.type==='car')b.speed=0;});
   requestGameFullscreen();
   input.zoom = 17;
   fishingSession?.finish(false,"La ligne est rangée.");
@@ -598,6 +622,7 @@ $("rotateBtn").onclick = () => {
 $("placeBtn").onclick = placeBuilding;
 $("cancelBuild").onclick = cancelBuild;
 function selectTool(id) {
+ if(driving&&id!=='journal')return toast('Descendez pour utiliser vos outils.');
   if (!started || battle) return;
   if (id === "journal") return openMenu();
   if (id === "build") return openMenu("build");
@@ -618,7 +643,7 @@ function renderToolbelt() {
     (b) => (b.onclick = () => selectTool(b.dataset.tool)),
   );
 }
-const QUEST_TARGETS = ["city", "home", "home", "forest", "home", "home", "ruins", null];
+const QUEST_TARGETS = ["city", "home", "forest", "home", "home", "ruins", null];
 
 function currentQuestIndex() {
   const raw = Number(state?.quest);
@@ -719,8 +744,9 @@ function questCheck() {
   persist();
 }
 function nearby() {
+ if(driving)return {type:'driving',name:'Voiture des Horizons · Descendre',x:driving.x,z:driving.z,distance:0};
   const p = state.player, list = [];
-  state.buildings.forEach((b,index)=>{if(spaceOf(b)===(state.location||'world') && Math.abs((b.y||0)-(p.y||0))<1)list.push({...b,type:'furniture',index,name:ITEMS[b.type],distance:Math.hypot(b.x-p.x,b.z-p.z)});});
+  state.buildings.forEach((b,index)=>{if(spaceOf(b)===(state.location||'world') && Math.abs((b.y||0)-(p.y||0))<1)list.push({...b,type:b.type==='car'?'car':'furniture',index,name:ITEMS[b.type],distance:Math.max(0,Math.hypot(b.x-p.x,b.z-p.z)-(b.type==='car'?.8:0))});});
   if(interior){if((p.y||0)<1)list.push({type:'exit',name:'Sortir de la maison',x:0,z:7,distance:Math.hypot(p.x,p.z-7)});return list.sort((a,b)=>a.distance-b.distance).find(v=>v.distance<2.5);}
   for (const n of world.npcs)
     list.push({
@@ -776,6 +802,7 @@ function nearby() {
 function interact() {
   if(fishingSession)return;
   if (!started || battle || !$("modal").hidden) return;
+  if(driving)return toggleCar();
   if (building) return placeBuilding();
   const a = nearby();
   if (!a) {
@@ -788,6 +815,7 @@ function interact() {
   if(a.type === 'expedition')return openExpeditions();
   if(a.type === 'shop')return shop();
   if(a.type === "exit") return leaveHome();
+  if(a.type === 'car')return furnishingMenu(a.index);
   if(a.type === "furniture") return furnishingMenu(a.index);
   if (a.type === "npc") {
     player.userData.playAction?.("Interact");
@@ -1265,6 +1293,7 @@ function attachTravel() {
         }
         if (world.collides(x, z, 0.5)) return;
         if(interior)leaveHome();
+        if(driving){toast('Descendez avant de voyager.');return;}
         state.player = { x, z };
         setupActors();
         closeModal();
@@ -1298,6 +1327,8 @@ function applySettings() {
   );
 }
 function startBuild(type, movingIndex=-1) {
+ if(driving)return toast('Descendez avant de placer un objet.');
+ if(type==='car'&&interior)return toast('La voiture se place dehors, partout sur un sol libre.');
   closeModal();
   if (movingIndex<0 && !state.inventory[type]) return;
   const initialR=movingIndex>=0?state.buildings[movingIndex].r:0;
@@ -1309,10 +1340,9 @@ function startBuild(type, movingIndex=-1) {
     x: initial.x,
     z: initial.z,
   };
-  if (preview) preview.removeFromParent();
-  preview = new T.Group();
-  const f = new Factory(preview);
-  furnishing(f, type, 0, 0, 0);
+  if (preview) {preview.userData.dispose?.();preview.removeFromParent();}
+  preview = type==='car'?carModel(true):new T.Group();
+  if(type!=='car'){const f = new Factory(preview);furnishing(f, type, 0, 0, 0);}
   preview.traverse((o) => {
     if (o.isMesh) {
       o.material = o.material.clone();
@@ -1332,14 +1362,14 @@ function placeBuilding() {
   const { x, z, type, r } = building;
   if (!canPlace(state, x, z, (x, z, r) => placementSolidAt(x, z, r),type,r,building.movingIndex)) {
     toast(
-      "Placez cette création sur votre terrain, à distance des cultures et des obstacles.",
+      type==='car'?'Placez la voiture dehors sur un sol sec et libre, à distance des obstacles et des cultures.':'Placez cette création sur votre terrain, à distance des cultures et des obstacles.',
     );
     return;
   }
   const placed={type,x,z,r,location:state.location||'world',y:interior?((state.player.y||0)>3.3?3.6:0):0};
   if(building.movingIndex>=0)Object.assign(state.buildings[building.movingIndex],placed);
   else {if (!spend(state, { [type]: 1 })) return; state.buildings.push(placed);}
-  if(type==='sleepingBed' && state.flags.craftedSleepingBed && state.location==='home')state.flags.placedSleepingBed=true;
+
   persist();
   syncWorld();
   world.burst(x, surfaceHeight(x, z) + 0.7, z);
@@ -1350,9 +1380,10 @@ function placeBuilding() {
 }
 function cancelBuild() {
   if (preview) {
+    preview.userData.dispose?.();
     preview.removeFromParent();
     preview.traverse((o) => {
-      if (o.isMesh) o.material.dispose();
+      if (o.isMesh) for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();
     });
     preview = null;
   }
@@ -1651,6 +1682,14 @@ function updateLighting() {
   sun.target.position.set(px, 0, pz);
 }
 function movePlayer(dt) {
+  if(driving){
+   const v=input.vector();input.target=null;input.route=[];
+   driveVehicle(driving,{throttle:-v.y,steer:v.x,brake:input.keys.has('shift')||input.running},dt,(x,z,r)=>carObstacle(driving,x,z,r));
+   Object.assign(state.player,{x:driving.x,z:driving.z,y:0});player.position.set(driving.x,height(driving.x,driving.z),driving.z);player.rotation.y=driving.r;
+   player.visible=companion.visible=false;vehicleFleet.update(driving,dt,height,v.x);
+   if($('runBtn'))$('runBtn').textContent=input.running?'Relâcher frein':'Freiner';
+   drivingHud.textContent=Math.round(Math.abs(driving.speed)*3.6)+(state.settings.touch||matchMedia('(pointer:coarse)').matches?' km/h · Joystick : conduire · Freiner : arrêt':' km/h · Z/S : avancer/reculer · Q/D : tourner · Maj : frein');return;
+  }
   const v = input.vector(),
     baseAngle = 0.65 + input.angle;
   let dx = 0,
@@ -1761,7 +1800,7 @@ function movePlayer(dt) {
 }
 function updateCamera(dt) {
   const compact = innerWidth < 950 && innerHeight < 600;
-  const outdoorTps = started && !battle && !interior;
+  const outdoorTps = started && !battle && !interior && !driving;
   // The classic outdoor camera keeps its old minimum distance (21). Zooming
   // farther in smoothly morphs into a real third-person camera instead of
   // collapsing the overhead view onto the player.
@@ -1813,11 +1852,12 @@ function updateCamera(dt) {
     battle.stage.update(dt, time);
   }
   if(interior && !battle){dist=7; target.y=player.position.y+1.1;}
+  if(driving){dist=15;angle=(driving.r||0)+Math.PI;target.y+=.5;}
   cameraTarget.lerp(target, 1 - Math.exp(-dt * (tpsBlend > .01 ? 7 : 4)));
 
   const overheadPos = new T.Vector3(
     cameraTarget.x + Math.sin(angle) * dist * 0.75,
-    cameraTarget.y + dist * (battle ? 0.35 : interior ? 0.22 : 0.84),
+    cameraTarget.y + dist * (battle ? 0.35 : interior ? 0.22 : driving ? .34 : 0.84),
     cameraTarget.z + Math.cos(angle) * dist * 0.75,
   );
   cameraPos.copy(overheadPos);
@@ -1880,7 +1920,7 @@ function updateUI() {
     selected = nearby();
     $("hint").textContent = selected?.name || "";
     $("actBtn").innerHTML =
-      (selected?.type === "wild"
+      (selected?.type === "driving" ? "Descendre" : selected?.type === "car" ? "Voiture" : selected?.type === "wild"
         ? "Rencontrer"
         : selected?.type === "resource"
           ? "Récolter"
@@ -2014,7 +2054,7 @@ function loop() {
         placementSolidAt(x, z, r), building.type, building.r, building.movingIndex
       );
       preview.traverse((o) => {
-        if (o.isMesh) o.material.color.set(valid ? "#a0d4a4" : "#dc8272");
+        if (o.isMesh) for(const m of Array.isArray(o.material)?o.material:[o.material])m.color.set(valid ? "#a0d4a4" : "#dc8272");
       });
       $("placeBtn").disabled = !valid;
     }
@@ -2156,4 +2196,4 @@ if ("serviceWorker" in navigator)
     .catch((e) => console.warn("Cache hors ligne indisponible", e));
 
 // Development harness imports; no automatic test execution.
-export { state, world, player, camera, renderer, input, begin, enterHome, leaveHome, openMenu, closeModal, startBuild, placeBuilding, cancelBuild, furnishingMenu, movePlayer, updateCamera, syncWorld, selectTool, fishing, startBattle, endBattle, interior, battle, applyMove };
+export { driving, toggleCar, vehicleFleet, interact, state, world, player, camera, renderer, input, begin, enterHome, leaveHome, openMenu, closeModal, startBuild, placeBuilding, cancelBuild, furnishingMenu, movePlayer, updateCamera, syncWorld, selectTool, fishing, startBattle, endBattle, interior, battle, applyMove };
