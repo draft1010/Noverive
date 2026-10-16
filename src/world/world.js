@@ -160,7 +160,7 @@ export class World {
     this.fountain?.update(t);
     this.rain.visible = state.weather === "pluie";
     if (this.rain.visible) {
-      this.rain.position.set(px, 0, pz);
+      this.rain.position.set(px, height(px,pz), pz);
       const a = this.rain.geometry.attributes.position;
       const rainCount = this.lowQuality ? Math.min(a.count, 420) : a.count;
       for (let i = 0; i < rainCount; i++) {
@@ -169,8 +169,9 @@ export class World {
       }
       a.needsUpdate = true;
     }
-    this.motes.position.x = Math.sin(t * 0.1) * 1.2;
-    this.motes.position.y = Math.sin(t * 0.4) * 0.2;
+    this.motes.position.x = px + Math.sin(t * 0.1) * 1.2;
+    this.motes.position.z = pz;
+    this.motes.position.y = height(px,pz)+Math.sin(t * 0.4) * 0.2;
     this.motes.material.opacity =
       state.time > 18 || state.time < 6 ? 0.8 : 0.35;
     for (const n of this.npcs) {
@@ -178,7 +179,7 @@ export class World {
       const npcVisible = npcDistance < (this.lowQuality ? 45 : 80);
       n.mesh.visible = npcVisible;
       if (!npcVisible) continue;
-      const motion = stepNpc(n, dt, { x: px, z: pz }, this.collides.bind(this));
+      const motion = stepNpc(n, dt*(state.weather==='pluie'?1.15:state.time>20?.8:1), { x: px, z: pz }, this.collides.bind(this));
       n.mesh.position.set(n.x, height(n.x, n.z), n.z);
       if (motion.facing !== undefined) n.mesh.rotation.y = motion.facing;
       n.animationElapsed=(n.animationElapsed||0)+dt;

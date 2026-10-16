@@ -1,3 +1,5 @@
+import {communityView} from './rendering/community-ui.js';
+import {deliverOrder,claimMilestone,startDelivery,deliveryTarget,updateDelivery,rank,shopPrice} from './systems/community.js';
 import {driveVehicle,vehicleExit} from './systems/vehicles.js';
 import {carModel,VehicleFleet} from './rendering/vehicles.js';
 import {waterDepth} from './world/terrain.js';
@@ -9,7 +11,7 @@ import {staticCollision} from './world/layout.js';
 import {equipment} from './rendering/equipment.js';
 import {PLAN,WORLD_SIZE} from './world/plan.js';
 import {EXPEDITIONS,expeditionReady,completeExpedition} from './systems/expeditions.js';
-import {disposeFurniture} from './rendering/modern-furniture.js';
+import {disposeFurniture,furniturePreview} from './rendering/modern-furniture.js';
 import {REGIONS,biomeAt,CITY_X,CITY_Z} from './world/regions.js';
 import { prepareOccluders, updateCutawayScreen } from './rendering/occlusion.js';
 import { FishingSession } from './rendering/fishing.js';
@@ -36,9 +38,7 @@ import { findPath } from "./systems/navigation.js";
 import { toolIcon } from "./rendering/icons.js";
 import {
   T,
-  Factory,
   creature,
-  furnishing,
   mat,
   windUniform,
   foliageFocus,
@@ -216,7 +216,7 @@ function enterHome(location='home') {
  state.player={x:0,z:4.5,y:0};player.position.set(0,0,4.5);
  input.zoom=7;camera.fov=55;camera.updateProjectionMatrix();cameraTarget.set(0,1,4.5);camera.position.set(3,2.7,7.3);
  interior.sync(state);document.body.classList.add('indoors');persist();
- toast(location==='home'?'Bienvenue chez vous. L’escalier est à droite. Approchez de la porte pour sortir.':location==='house--40-24'?'Bienvenue au Café des Sources. Approchez de la porte pour sortir.':'Bienvenue. L’escalier est à droite ; la sortie est derrière vous.');
+ toast(location==='home'?'Bienvenue chez vous. L’escalier est à droite. Approchez de la porte pour sortir.':location==='house--40-24'?'Bienvenue au Café des Sources. Approchez de la porte pour sortir.':location==='house--8-24'?'Centre de soins : comptoir au fond, explorateurs à gauche. Soins gratuits.':'Bienvenue. L’escalier est à droite ; la sortie est derrière vous.');
 }
 function leaveHome() {
  sceneTransition();
@@ -746,6 +746,10 @@ function questCheck() {
 function nearby() {
  if(driving)return {type:'driving',name:'Voiture des Horizons · Descendre',x:driving.x,z:driving.z,distance:0};
   const p = state.player, list = [];
+  if(interior && (p.y||0)<1){
+   if(state.location==='house--40-24')list.push({type:'shop',name:'Comptoir · boutique du Café',x:-2,z:-3,distance:Math.hypot(p.x+2,p.z+3)});
+   if(state.location==='house--8-24'){list.push({type:'clinic',name:'Centre de soins · soigner l’équipe',x:0,z:-3,distance:Math.hypot(p.x,p.z+3)});list.push({type:'expedition',name:'Comptoir des explorateurs',x:-6,z:3,distance:Math.hypot(p.x+6,p.z-3)});}
+  }
   state.buildings.forEach((b,index)=>{if(spaceOf(b)===(state.location||'world') && Math.abs((b.y||0)-(p.y||0))<1)list.push({...b,type:b.type==='car'?'car':'furniture',index,name:ITEMS[b.type],distance:Math.max(0,Math.hypot(b.x-p.x,b.z-p.z)-(b.type==='car'?.8:0))});});
   if(interior){if((p.y||0)<1)list.push({type:'exit',name:'Sortir de la maison',x:0,z:7,distance:Math.hypot(p.x,p.z-7)});return list.sort((a,b)=>a.distance-b.distance).find(v=>v.distance<2.5);}
   for (const n of world.npcs)
@@ -814,6 +818,7 @@ function interact() {
   player.rotation.y = Math.atan2(a.x - state.player.x, a.z - state.player.z);
   if(a.type === 'expedition')return openExpeditions();
   if(a.type === 'shop')return shop();
+  if(a.type === 'clinic')return clinic();
   if(a.type === "exit") return leaveHome();
   if(a.type === 'car')return furnishingMenu(a.index);
   if(a.type === "furniture") return furnishingMenu(a.index);
@@ -927,9 +932,13 @@ function dialogue(n) {
     state.friendship[n.name] = Math.min(5, met + 1);
     state.flags["talkDay" + n.name] = state.day;
   }
+  const seasonalLine=state.weather==='pluie'?'La pluie fait du bien aux cultures. Une belle journée pour l’atelier.':state.time>18?'Les lanternes s’allument. Prends le temps de voir les jardins à la tombée du jour.':['Les voisins ont laissé de nouvelles commandes dans ton carnet.','Les halles attendent les récoltes du domaine.','Une tournée en voiture, et l’on redécouvre les Horizons.'][state.day%3];
+  text+=' '+seasonalLine;
+  actions+=' <button id="localLife">Les nouvelles du quartier</button>';
   showModal(
     `<span class="eyebrow">${n.role}</span><h2>${n.name}</h2><p class="note">« ${text} »</p><p>Affinité ${"♥".repeat(state.friendship[n.name])}${"♡".repeat(5 - state.friendship[n.name])}</p>${actions} <button id="bye">À bientôt</button>`,
   );
+  $('localLife').onclick=()=>openMenu('community');
   $("bye").onclick = closeModal;
   if ($("guideHome"))
     $("guideHome").onclick = () => {
@@ -941,14 +950,20 @@ function dialogue(n) {
   questCheck();
   updateHUD();
 }
+function clinic(){
+ const hurt=state.team.some(c=>c.hp<c.maxHp||c.energy<30||c.status);
+ showModal('<span class="eyebrow">CENTRE DE SOINS DES HORIZONS</span><h2>Une pause pour votre équipe</h2><p>Soins gratuits : santé, énergie et altérations. Vos compagnons méritent de repartir en pleine forme.</p><button id="healTeam" '+(!hurt?'disabled':'')+'>'+(!hurt?'Toute l’équipe est en forme':'Soigner mes compagnons')+'</button><button id="clinicLocal">Les nouvelles du quartier</button>');
+ $('healTeam').onclick=()=>{for(const c of state.team){c.hp=c.maxHp;c.energy=30;c.status=null;c.guard=false;}persist();updateHUD();audio.play('water');clinic();toast('Vos compagnons ont retrouvé toute leur énergie.');};
+ $('clinicLocal').onclick=()=>openMenu('community');
+}
 function shop() {
   showModal(
-    `<span class="eyebrow">HALLES DES HORIZONS</span><h2>Un panier pour demain</h2><p>Votre bourse : ${state.coins} ambres</p><div class="rows">${[
+    `<span class="eyebrow">HALLES DES HORIZONS</span><h2>Un panier pour demain</h2><p>Votre bourse : ${state.coins} ambres · ${rank(state)} · Remise ${100-shopPrice(state,100)} %</p><div class="rows">${[
       ["seed", 5],
       ["wheatSeed",7],["carrotSeed",6],["flaxSeed",8],["pumpkinSeed",10],
       ["seal", 18],
       ["potion", 15],["sofa",95],["table",40],["chair",20],["sleepingBed",80],["chest",35],["stove",90],
-    ]
+    ].map(([id,price])=>[id,shopPrice(state,price)])
       .map(
         ([id, price]) =>
           `<div class="row"><div><b>${ITEMS[id]}</b><small>${price} ambres · En sac : ${state.inventory[id] || 0}</small></div><button data-buy="${id}" data-price="${price}" ${state.coins < price ? "disabled" : ""}>Acheter</button></div>`,
@@ -1025,6 +1040,7 @@ function fishing(spot=null) {
  fishingSession=new FishingSession(scene,player,spot?.lake?PLAN.lake.x+Math.cos(angle)*PLAN.lake.rx*.9:riverX(state.player.z)-1,spot?.lake?PLAN.lake.z+Math.sin(angle)*PLAN.lake.rz*.9:state.player.z,(success,message)=>{fishingSession=null;if(success){if(!add(state,'fish'))return toast('Votre sac est plein. Le poisson est relâché.');audio.play('harvest');persist();}toast(message);});
 }
 const tabs = [
+  ["community","Vie locale","Commandes, réputation et grandes étapes"],
   ["team", "Compagnons", "Vos liens et votre équipe active"],
   ["bag", "Sac", "Ressources, récoltes et objets"],
   ["craft", "Fabriquer", "Recettes et créations"],
@@ -1053,13 +1069,14 @@ function openMenu(tab = modalTab) {
   if(building)cancelBuild();
   modalTab = tab;
   let html = "";
+  if (tab === "community") html=communityView(state);
   if (tab === "team") html = teamView(state);
   if (tab === "bag") html = bagView(state);
   if (tab === "craft") html = craftView(state, craftCanAfford, craftAvailable, craftOutputFits);
   if (tab === "build") html = gardenView(state);
   if (tab === "map")
     html = `<div class="menu-lead"><div><span class="section-kicker">RÉGION DE NOVERIVE</span><h3>Votre carte d’exploration</h3><p>Les chemins et les lieux se révèlent au fil de vos pas. Sélectionnez un lieu pour suivre la flèche du repère. Pour la carrière et la grotte, rejoignez la rive est par un pont ou en traversant la rivière peu profonde, puis suivez le sentier vers le nord. Les cristaux se récoltent avec la pioche.</p></div><div class="menu-stat"><small>DÉCOUVERTS</small><b>${state.discovered.length}</b></div></div><div class="map-frame"><canvas class="mapLarge" id="largeMap" width="760" height="430"></canvas><div class="map-compass">N</div></div><div class="mapLegend premium-map-legend">${LANDMARKS.filter(
-      (l) => state.discovered.includes(l.id) || ["cave","quarry"].includes(l.id),
+      (l) => state.discovered.includes(l.id) || ["cave","quarry","clinic","boutique"].includes(l.id),
     )
       .map((l) => `<button data-mark="${l.id}"><span>◇</span>${l.name}</button>`)
       .join(
@@ -1075,11 +1092,14 @@ function openMenu(tab = modalTab) {
     }).join("")}</div>`;
   }
   if (tab === "settings")
-    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Éco par défaut. Distance, ombres, végétation et effets adaptés.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${GRAPHICS[q].label}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.7 · Noverive · Sauvegarde locale versionnée</small>`;
+    html = `<div class="settings-grid"><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">◫</span><div><small>AFFICHAGE</small><h3>Qualité visuelle</h3></div></div><label class="setting-row"><span><b>Qualité graphique</b><small>Éco par défaut. Distance, ombres, végétation et effets adaptés.</small></span><select id="quality">${["low", "medium", "high", "ultra"].map((q, i) => `<option value="${q}" ${state.settings.quality === q ? "selected" : ""}>${GRAPHICS[q].label}</option>`).join("")}</select></label><label class="setting-row toggle-row"><span><b>Mesures de performance</b><small>Affiche les informations techniques.</small></span><input type="checkbox" id="perf" ${!$("debug").hidden ? "checked" : ""}></label></section><section class="settings-card"><div class="settings-card-head"><span class="settings-symbol">⌁</span><div><small>EXPÉRIENCE</small><h3>Sons & contrôles</h3></div></div><label class="setting-row toggle-row"><span><b>Sons de Noverive</b><small>Ambiance, interactions et combats.</small></span><input type="checkbox" id="sound" ${state.settings.sound ? "checked" : ""}></label><label class="setting-row toggle-row"><span><b>Contrôles tactiles</b><small>Affiche les commandes adaptées au smartphone.</small></span><input type="checkbox" id="touch" ${state.settings.touch ? "checked" : ""}></label><div class="settings-actions"><button id="fullscreen">Plein écran</button><button id="photo">Mode paysage sans interface</button></div></section><section class="settings-card settings-card-wide"><div class="settings-card-head"><span class="settings-symbol">◇</span><div><small>VOYAGE</small><h3>Sauvegarde</h3></div></div><p>Votre progression est enregistrée localement sur cet appareil. Vous pouvez aussi conserver une copie du voyage.</p><div class="settings-actions"><button id="saveBtn" class="primary">Sauvegarder</button><button id="exportBtn">Exporter</button><button id="importBtn">Importer</button><input type="file" id="importFile" accept="application/json" hidden></div></section></div><div class="controls-note"><b>Commandes PC</b><span>ZQSD / WASD / flèches · déplacement à 360°</span><span>Maj · courir</span><span>E · agir</span><span>1–6 · outils</span><span>Tab · carnet</span><span>M · carte</span><span>R · tourner</span><span>Échap · retour</span></div><small class="version-note">Version 0.8 · Noverive · Sauvegarde locale versionnée</small>`;
   const current = tabs.find((t) => t[0] === tab) || tabs[0];
   showModal(
     `<div class="journal-shell"><aside class="journal-sidebar"><div class="journal-brand"><span class="journal-sigil">❧</span><div><b>NOVERIVE</b><small>CARNET DE ${esc(state.name).toUpperCase()}</small></div></div><nav class="journal-nav">${tabs.map(([id, label]) => `<button data-tab="${id}" aria-label="${label}" title="${label}" class="${id === tab ? "selected" : ""}">${tabIcon(id)}<span>${label}</span><i></i></button>`).join("")}</nav><div class="journal-sidebar-foot"><div><small>JOUR</small><b>${state.day}</b></div><div><small>AMBRE</small><b>◈ ${state.coins}</b></div></div></aside><section class="journal-page"><header class="journal-page-header"><div><span class="eyebrow">${current[2].toUpperCase()}</span><h2>${current[1]}</h2></div><div class="journal-day"><small>${state.weather.toUpperCase()}</small><b>${$("clock").textContent || "08:00"}</b><span>${$("calendar").textContent || `Jour ${state.day}`}</span></div></header><div class="journal-content">${html}</div></section></div>`,
   );
+  document.querySelectorAll('[data-order]').forEach(b=>b.onclick=()=>{if(deliverOrder(state,b.dataset.order)){persist();updateHUD();openMenu('community');audio.play('craft');}});
+  document.querySelectorAll('[data-milestone]').forEach(b=>b.onclick=()=>{if(claimMilestone(state,b.dataset.milestone)){persist();updateHUD();openMenu('community');audio.play('harvest');}});
+  if($('deliveryAction'))$('deliveryAction').onclick=()=>{startDelivery(state);const target=deliveryTarget(state);if(target){state.flags.marker=target.id;persist();closeModal();toast('Tournée : '+target.name);}};
   document
     .querySelectorAll("[data-tab]")
     .forEach((b) => (b.onclick = () => openMenu(b.dataset.tab)));
@@ -1327,6 +1347,7 @@ function applySettings() {
   );
 }
 function startBuild(type, movingIndex=-1) {
+ if(['house--40-24','house--8-24'].includes(state.location))return toast('Cet établissement est public. Aménagez votre maison ou votre domaine.');
  if(driving)return toast('Descendez avant de placer un objet.');
  if(type==='car'&&interior)return toast('La voiture se place dehors, partout sur un sol libre.');
   closeModal();
@@ -1341,16 +1362,8 @@ function startBuild(type, movingIndex=-1) {
     z: initial.z,
   };
   if (preview) {preview.userData.dispose?.();preview.removeFromParent();}
-  preview = type==='car'?carModel(true):new T.Group();
-  if(type!=='car'){const f = new Factory(preview);furnishing(f, type, 0, 0, 0);}
-  preview.traverse((o) => {
-    if (o.isMesh) {
-      o.material = o.material.clone();
-      o.material.transparent = true;
-      o.material.opacity = 0.5;
-      o.material.depthWrite = false;
-    }
-  });
+  preview = type==='car'?carModel(true):furniturePreview(type);
+  if(type==='car'){const pending=preview;pending.userData.previewReady=false;pending.userData.ready.then(()=>{if(!pending.userData.disposed)pending.userData.previewReady=true;});}
   currentScene().add(preview);
   $("buildbar").hidden = false;
   $("buildlabel").textContent = ITEMS[type];
@@ -1359,6 +1372,7 @@ function startBuild(type, movingIndex=-1) {
 }
 function placeBuilding() {
   if (!building) return;
+  if(!preview?.userData.previewReady)return toast('Le modèle du meuble est en cours de chargement.');
   const { x, z, type, r } = building;
   if (!canPlace(state, x, z, (x, z, r) => placementSolidAt(x, z, r),type,r,building.movingIndex)) {
     toast(
@@ -1670,6 +1684,7 @@ function updateLighting() {
   scene.background.set(
     day < 0.2 ? "#607889" : state.weather === "pluie" ? "#a6bcb3" : "#a8c9df",
   );
+  scene.background.lerp(sun.color,sunset*.16);
   scene.fog.color.copy(scene.background);
   world.water.material.uniforms.sun.value = day;
   if (world.lightPools)
@@ -1684,7 +1699,9 @@ function updateLighting() {
 function movePlayer(dt) {
   if(driving){
    const v=input.vector();input.target=null;input.route=[];
+   const carX=driving.x,carZ=driving.z;
    driveVehicle(driving,{throttle:-v.y,steer:v.x,brake:input.keys.has('shift')||input.running},dt,(x,z,r)=>carObstacle(driving,x,z,r));
+   state.flags.drivenMeters=(state.flags.drivenMeters||0)+Math.hypot(driving.x-carX,driving.z-carZ);
    Object.assign(state.player,{x:driving.x,z:driving.z,y:0});player.position.set(driving.x,height(driving.x,driving.z),driving.z);player.rotation.y=driving.r;
    player.visible=companion.visible=false;vehicleFleet.update(driving,dt,height,v.x);
    if($('runBtn'))$('runBtn').textContent=input.running?'Relâcher frein':'Freiner';
@@ -1902,6 +1919,7 @@ function updateCamera(dt) {
   camera.lookAt(cameraTarget);
 }
 function updateUI() {
+ const deliveryNotice=updateDelivery(state,!!driving);if(deliveryNotice){toast(deliveryNotice);audio.play('craft');persist();}
   const hour = Math.floor(state.time),
     min = Math.floor((state.time % 1) * 60);
   $("clock").textContent =
@@ -2050,11 +2068,11 @@ function loop() {
         building.z,
       );
       preview.rotation.y = building.r;
-      const valid = canPlace(state, building.x, building.z, (x, z, r) =>
+      const valid = preview.userData.previewReady && canPlace(state, building.x, building.z, (x, z, r) =>
         placementSolidAt(x, z, r), building.type, building.r, building.movingIndex
       );
       preview.traverse((o) => {
-        if (o.isMesh) for(const m of Array.isArray(o.material)?o.material:[o.material])m.color.set(valid ? "#a0d4a4" : "#dc8272");
+        if (o.isMesh) for(const m of Array.isArray(o.material)?o.material:[o.material]){m.userData.previewColor ||= m.color.clone();m.color.copy(m.userData.previewColor);if(!valid)m.color.multiplyScalar(.65);}
       });
       $("placeBtn").disabled = !valid;
     }
@@ -2066,7 +2084,7 @@ function loop() {
   foliageCamera.value.copy(camera.position);
   if(player)updateCutawayScreen(camera,renderer,foliageFocus.value);
   if(!battle&&!interior){
-    skyAtmosphere.update(camera,Math.max(.08,Math.sin(((state.time-6)/15)*Math.PI)),state.weather==='pluie'?1:0);
+    skyAtmosphere.update(camera,Math.max(.08,Math.sin(((state.time-6)/15)*Math.PI)),state.weather==='pluie'?1:0,time,state.time);
     contacts.update([player,companion,...world.npcs.map(n=>n.mesh),...world.wild.map(w=>w.mesh)],height);
   }
   shadowElapsed+=dt;
@@ -2196,4 +2214,4 @@ if ("serviceWorker" in navigator)
     .catch((e) => console.warn("Cache hors ligne indisponible", e));
 
 // Development harness imports; no automatic test execution.
-export { driving, toggleCar, vehicleFleet, interact, state, world, player, camera, renderer, input, begin, enterHome, leaveHome, openMenu, closeModal, startBuild, placeBuilding, cancelBuild, furnishingMenu, movePlayer, updateCamera, syncWorld, selectTool, fishing, startBattle, endBattle, interior, battle, applyMove };
+export { preview, building, driving, toggleCar, vehicleFleet, interact, state, world, player, camera, renderer, input, begin, enterHome, leaveHome, openMenu, closeModal, startBuild, placeBuilding, cancelBuild, furnishingMenu, movePlayer, updateCamera, syncWorld, selectTool, fishing, startBattle, endBattle, interior, battle, applyMove };

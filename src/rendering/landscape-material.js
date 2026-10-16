@@ -1,20 +1,25 @@
 import {T} from './art.js';
+// A 16 KiB repeatable noise lookup replaces repeated per-pixel sine hashes.
+const noiseBytes=new Uint8Array(128*128);let seed=1977;
+for(let i=0;i<noiseBytes.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;noiseBytes[i]=seed>>>24;}
+const noiseMap=new T.DataTexture(noiseBytes,128,128,T.RedFormat);noiseMap.wrapS=noiseMap.wrapT=T.RepeatWrapping;noiseMap.magFilter=noiseMap.minFilter=T.LinearFilter;noiseMap.needsUpdate=true;
 // World-space materials keep the same physical tile size across all streaming sectors.
 export function landscapeMaterial(){
  const material=new T.MeshStandardMaterial({vertexColors:true,roughness:.94});
  material.userData.cutawayExcluded=true;
+ const wet={value:0};material.userData.setWeather=weather=>wet.value=weather==='pluie'?1:0;
  const detail={value:0};material.userData.setDetail=q=>{detail.value=q==='low'?0:1;};
- material.onBeforeCompile=shader=>{shader.uniforms.uGroundDetail=detail;
+ material.onBeforeCompile=shader=>{shader.uniforms.uGroundDetail=detail;shader.uniforms.uGroundNoise={value:noiseMap};shader.uniforms.uGroundWet=wet;
   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float surface; varying vec3 vLandscape; varying float vSurface;').replace('#include <begin_vertex>','#include <begin_vertex>\nvLandscape=(modelMatrix*vec4(position,1.0)).xyz; vSurface=surface;');
   shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
-   uniform float uGroundDetail; varying vec3 vLandscape; varying float vSurface;
+   uniform sampler2D uGroundNoise;uniform float uGroundWet;uniform float uGroundDetail; varying vec3 vLandscape; varying float vSurface;
    float grain(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-   float noise2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(grain(i),grain(i+vec2(1,0)),f.x),mix(grain(i+vec2(0,1)),grain(i+vec2(1)),f.x),f.y);}
+   float noise2(vec2 p){return texture2D(uGroundNoise,(p+.5)/128.).r;}
   `).replace('#include <color_fragment>',`#include <color_fragment>
    vec2 p=vLandscape.xz;
    float broad=noise2(p*.17),small=noise2(p*4.0),fine=grain(floor(p*32.0));
    float surface=vSurface;
-   bool city=p.x>=-768.&&p.x<=0.&&p.y>=-576.&&p.y<=96.;
+   bool city=p.x>=-772.&&p.x<=4.&&p.y>=-580.&&p.y<=100.;
    vec2 grid=abs(p-floor(p/48.+.5)*48.);
    bool country=(p.y>96.&&p.y<120.&&abs(p.x+96.)<3.8)||(p.x>=-100.&&p.x<=-60.&&abs(p.y-120.)<3.8)||(p.y>=120.&&abs(p.x+64.)<3.8)||(p.x>0.&&p.x<820.&&abs(p.y-8.)<3.8);
    bool trail=(p.x>140.&&p.x<261.&&abs(p.y+200.)<2.2)||(p.y< -348.&&p.y> -360.&&abs(p.x-465.)<2.2)||(p.x>28.&&abs(p.x-(180.+sin(p.y*.006)*38.))<2.2)||(p.x>140.&&p.x<740.&&abs(p.y+350.)<2.2)||(p.x>180.&&p.x<430.&&abs(p.y-280.)<2.2)||(p.x>-130.&&p.x<-68.&&abs(p.y-168.)<2.);
@@ -23,9 +28,9 @@ export function landscapeMaterial(){
    if(surface<.5){
     float blades=smoothstep(.50,.82,grain(floor(p*vec2(40.0,7.0))));
     float meadow=noise2(p*.42)*.6+noise2(p*.085)*.4;
-    diffuseColor.rgb*=.64+broad*.36+small*.18+blades*.14;
+    diffuseColor.rgb*=.70+broad*.26+small*.16+blades*.1;
     diffuseColor.rgb=mix(diffuseColor.rgb*vec3(.76,.92,.66),diffuseColor.rgb*vec3(1.18,1.12,.77),smoothstep(.25,.75,meadow));
-    diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.14,1.04,.78),smoothstep(.55,.8,noise2(p*.31))*.3);
+    diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.14,1.04,.78),smoothstep(.55,.8,broad)*.3);
    }else if(surface<1.5){
     vec2 q=p*1.25;
     vec2 uv=fract(q),aa=fwidth(q)*.85;
@@ -37,6 +42,7 @@ export function landscapeMaterial(){
    }else if(surface<2.5){diffuseColor.rgb=vec3(.34,.27,.18)*(.78+broad*.32+small*.25+fine*.12);}
    else if(surface<3.5){diffuseColor.rgb=vec3(.17,.19,.19)*(.88+small*.12+fine*.15);}
    else{diffuseColor.rgb=vec3(.53,.47,.32)*(.85+broad*.18+fine*.12);}
+   diffuseColor.rgb*=1.-uGroundWet*(surface>2.5?.17:.08);
   `).replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
    if(uGroundDetail>.5 && (vSurface<.5 || (vSurface>1.5 && vSurface<2.5))){
     vec2 p=vLandscape.xz;float relief=noise2(p*3.)*.018;
@@ -47,6 +53,6 @@ export function landscapeMaterial(){
    }
   `);
  };
- material.customProgramCacheKey=()=> 'noverive-landscape-v5';
+ material.customProgramCacheKey=()=> 'noverive-landscape-v6';
  return material;
 }

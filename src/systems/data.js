@@ -370,6 +370,8 @@ export const TOOLS = [
   ["journal", "☷", "Carnet"],
 ];
 export const LANDMARKS = [
+ {id:'clinic',name:'Centre de soins · gratuit',x:-13,z:24},
+ {id:'boutique',name:'Boutique et Café des Horizons',x:-34,z:24},
  {id:'downtown',name:'Métropole des Horizons',x:-240,z:-168},
  {id:'lake',name:'Lac des Reflets',x:292,z:280},
  {id:'mountain',name:'Massif du Levant',x:650,z:-550},

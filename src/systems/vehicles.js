@@ -15,10 +15,11 @@ export function driveVehicle(car,control,dt,blocked) {
   let speed=car.speed||0;
   const braking=control.brake || (throttle && speed*throttle<0);
   if(braking||!throttle){const loss=(braking?18:3)*dt;speed=Math.sign(speed)*Math.max(0,Math.abs(speed)-loss);}
-  else speed=Math.max(-4,Math.min(14,speed+throttle*7*dt));
+  else speed=Math.max(-4,Math.min(18,speed+throttle*8*dt));
   const steps=Math.max(1,Math.ceil(Math.abs(speed)*dt/.09));
   for(let i=0;i<steps;i++){
-    const r=(car.r||0)-(control.steer||0)*speed/2.5*.48*dt/steps;
+    const steering=(control.steer||0)*(.62/(1+Math.abs(speed)*.075));
+    const r=(car.r||0)-steering*speed/2.5*dt/steps;
     const next={x:car.x+Math.sin(r)*speed*dt/steps,z:car.z+Math.cos(r)*speed*dt/steps,r};
     if(vehicleBlocked(next,blocked)){speed=0;break;}
     Object.assign(car,next);

@@ -6,7 +6,7 @@ export function buildInterior(room,location){
  room.scene.add(new T.HemisphereLight('#edf6ff','#9b8368',2.5));const daylight=new T.DirectionalLight('#fff5df',2.6);daylight.position.set(-8,10,4);room.scene.add(daylight);
  const plaster=new T.MeshStandardMaterial({color:'#f1ede2',roughness:.9}),dark=new T.MeshStandardMaterial({color:'#243d43',roughness:.35,metalness:.3}),oak=new T.MeshStandardMaterial({color:'#bda37c',roughness:.6}),glass=new T.MeshStandardMaterial({color:'#9ec5d1',transparent:true,opacity:.2,roughness:.1,metalness:.15}),stone=new T.MeshStandardMaterial({color:'#d0cec5',roughness:.85});
  oak.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vRoom;').replace('#include <begin_vertex>','#include <begin_vertex>\nvRoom=(modelMatrix*vec4(position,1.)).xyz;');s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vRoom;').replace('#include <color_fragment>',`#include <color_fragment>
- vec2 p=vRoom.xz;float row=floor(p.x/.22),offset=fract(sin(row*13.7)*637.5)*2.4;vec2 tile=fract(vec2(p.x/.22,(p.y+offset)/2.4));float seam=step(.015,min(tile.x,1.-tile.x))*step(.002,min(tile.y,1.-tile.y));float grain=sin(p.x*360.+sin(p.y*5.)*2.)*.025;diffuseColor.rgb*=mix(.55,.91+fract(sin(row*21.4)*317.2)*.15+grain,seam);`);};
+ vec2 p=vRoom.xz;float row=floor(p.x/.22),offset=fract(sin(row*13.7)*637.5)*2.4;vec2 tile=fract(vec2(p.x/.22,(p.y+offset)/2.4));vec2 aa=fwidth(vec2(p.x/.22,(p.y+offset)/2.4));float seam=smoothstep(.008,.008+aa.x,min(tile.x,1.-tile.x))*smoothstep(.002,.002+aa.y,min(tile.y,1.-tile.y));float grain=sin(p.x*80.+sin(p.y*5.)*2.)*.018*(1.-smoothstep(.01,.05,fwidth(p.x)));diffuseColor.rgb*=mix(.55,.91+fract(sin(row*21.4)*317.2)*.15+grain,seam);`);};
  room.materials=[plaster,dark,oak,glass,stone];plaster.userData.cutawayOccluder=true;for(const m of [dark,oak,stone])m.userData.cutawayExcluded=true;
  const mesh=(w,h,d,x,y,z,m)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;room.root.add(o);return o;};
  mesh(18,.18,16,0,-.09,0,oak);mesh(14.4,.18,16,-1.8,3.51,0,oak);mesh(3.6,.18,3,7.2,3.51,-6.5,oak);mesh(3.6,.18,4.6,7.2,3.51,5.7,oak);
@@ -28,7 +28,17 @@ export function buildInterior(room,location){
  const fixture=(id,x,y,z,s=1,r=0,solid=true)=>{placeModel(id,room.fixtures,x,y,z,s,r).catch(e=>console.warn(e.message));const a=ASSETS[id],c=Math.abs(Math.cos(r)),t=Math.abs(Math.sin(r));if(solid)room.fixedColliders.push({x,y,z,w:(a.size[0]*c+a.size[2]*t)*s,d:(a.size[0]*t+a.size[2]*c)*s});};
  fixture('Sink_A',-7,0,-6.6,.85,Math.PI/2);fixture('StationTable_1_A',-5.9,0,-6.6,1,Math.PI/2);fixture('Owen_A',-4.8,0,-6.6,.85);fixture('HangShelf_1_A',-6.4,2,-7.6,1.3,0,false);
  for(const [x,z] of [[-7.7,6],[3.8,-6.6]]){fixture('FlowerPot_5_1_A',x,0,z,1);fixture('Bush_1_A_1',x,.25,z,.52,0,false);}
- if(location==='house--40-24'){
+ if(location==='house--8-24'){
+  plaster.color.set('#e4eee9');oak.color.set('#c7cbb9');
+  fixture('StationTable_1_A',0,0,-4.4,1.5,Math.PI/2);
+  for(const [x,z] of [[-6,-3],[-3,-3],[-6,1],[-3,1]])fixture('EAThe80_Prop_Bed_01a_LOD0',x,0,z,.72);
+  fixture('StandShelf_1_A',-7,0,4,1);fixture('Chair_1_A',0,0,-6,1);
+  // A back-lit cross identifies the clinic without a dynamic light.
+  mesh(.18,1.5,.06,0,2.1,-7.7,lightMat);mesh(1.15,.18,.06,0,2.1,-7.68,lightMat);
+ }else if(location==='house--40-24'){
+  fixture('StationTable_1_A',-2,0,-4.4,1.4,Math.PI/2);
+  fixture('StandShelf_1_A',2,0,-5.7,1.3);
+
   for(const [x,z] of [[-5,-1],[-1,-1],[-5,3],[-1,3]]){fixture('Table_1_A',x,0,z,1.1);fixture('Chair_1_A',x-1.2,0,z,1,Math.PI/2);fixture('Chair_1_A',x+1.2,0,z,1,-Math.PI/2);fixture('FlowerPot_5_1_A',x,.8,z,.25,0,false);}
   fixture('Sofa_1_A',-7.2,0,2,1,Math.PI/2);
  }else if(location!=='home'){fixture('Table_1_A',-2,0,0,1.5);fixture('StandShelf_1_A',-6,0,-3,1.5);fixture('Sofa_1_A',-6,0,4,1);}

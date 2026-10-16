@@ -21,7 +21,7 @@ export function terrainMesh(cx,cz,size=32,steps=16){
 export class WorldStreamer {
  constructor(world){this.world=world;this.active=new Map();this.pending=0;this.failures=[];this.radius=80;this.lastKey='';this.elapsed=1;}
  update(dt,x,z,state){
-  this.elapsed+=dt;this.state=state;this.profile=graphicsProfile(state.settings.quality);this.radius=this.profile.radius;
+  this.elapsed+=dt;this.state=state;grassMaterial.userData.setWeather(state.weather);grassMaterial.userData.setDetail(state.settings.quality);this.profile=graphicsProfile(state.settings.quality);this.radius=this.profile.radius;
   if(this.elapsed<.15)return;this.elapsed=0;
   const wanted=wantedChunks(x,z,this.radius),keep=new Set(wantedChunks(x,z,this.radius+24).map(c=>c.key));this.desiredKeys=wanted.map(c=>c.key);
   for(const [key,sector] of this.active)if(!keep.has(key))this.unload(key,sector);

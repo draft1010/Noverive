@@ -2,9 +2,9 @@ import {PLAN,WORLD_SIZE,inCity,cityBlock} from './plan.js';
 export const WORLD_LIMIT=WORLD_SIZE/2,CHUNK_SIZE=32;
 export const REGIONS=[
  {id:'downtown',name:'Les Horizons • Métropole',x:-240,z:-168,color:'#a6a8a2',species:['velune','lumignon','melipom'],resources:['scrap'],level:2},
- {id:'suburb',name:'Jardins de la Rive',x:-180,z:120,color:'#8eaa72',species:['velune','aurelievre','melipom'],resources:['fiber'],level:2},
- {id:'farm',name:'Les Vergers',x:-96,z:190,color:'#92a863',species:['cactine','moussier','melipom','aurelievre'],resources:['fiber','wood'],level:3},
- {id:'forest',name:'Forêt des Murmures',x:180,z:80,color:'#557e50',species:['dinosylve','moussier','germousse','vrille','velune'],resources:['wood','fiber'],level:4},
+ {id:'suburb',name:'Jardins de la Rive',x:-180,z:120,color:'#85a178',species:['velune','aurelievre','melipom'],resources:['fiber'],level:2},
+ {id:'farm',name:'Les Vergers',x:-96,z:190,color:'#829e70',species:['cactine','moussier','melipom','aurelievre'],resources:['fiber','wood'],level:3},
+ {id:'forest',name:'Forêt des Murmures',x:180,z:80,color:'#587e60',species:['dinosylve','moussier','germousse','vrille','velune'],resources:['wood','fiber'],level:4},
  {id:'lake',name:'Lac des Reflets',x:410,z:280,color:'#96ad7c',species:['calamaree','ondril','rainette','coralys'],resources:['fiber'],level:4},
  {id:'quarry',name:'Carrière des Roches Claires',x:260,z:-200,color:'#a99881',species:['sorbel','rocogre','galetis','brasile','dracendre'],resources:['stone','ore','coal'],level:5},
  {id:'mountain',name:'Massif du Levant',x:650,z:-550,color:'#929b8b',species:['astrel','nivours','alizelle','galetis'],resources:['stone','ore'],level:7},
@@ -15,7 +15,7 @@ export function biomeAt(x,z){let id=inCity(x,z)?'downtown':x<5?(z<155?'suburb':'
 export const CITY_X=Array.from({length:17},(_,i)=>-768+i*48),CITY_Z=Array.from({length:15},(_,i)=>-576+i*48);
 const gridDistance=n=>Math.abs(n-Math.round(n/48)*48);
 export function roadAt(x,z){
- if(inCity(x,z)&&(gridDistance(x)<4||gridDistance(z)<4))return 'city';
+ if(x>=-772&&x<=4&&z>=-580&&z<=100&&(gridDistance(x)<4||gridDistance(z)<4))return 'city';
  if(x>0&&x<820&&Math.abs(z-8)<3.8)return 'country';
  if(z>96&&z<120&&Math.abs(x+96)<3.8)return 'country';
  if(x>=-100&&x<=-60&&Math.abs(z-120)<3.8)return 'country';

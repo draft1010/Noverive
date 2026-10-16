@@ -37,8 +37,8 @@ export function buildModernWorld(w){
   {type:'shop',name:'Halles des Horizons · acheter et vendre',x:-78,z:28},
   {type:'home',name:'Votre maison · entrer',x:PLAN.door.x,z:PLAN.door.z},
   {type:'workbench',name:'Atelier du domaine',x:PLAN.workshop.x,z:PLAN.workshop.z},
-  {type:'home',name:'Café des Horizons · entrer',location:'house--40-24',x:-34,z:24},
-  {type:'home',name:'Maison des Explorateurs · entrer',location:'house--8-24',x:-13,z:24}
+  {type:'home',name:'Boutique et Café des Horizons · entrer',location:'house--40-24',x:-34,z:24},
+  {type:'home',name:'Centre de soins et Explorateurs · entrer',location:'house--8-24',x:-13,z:24}
  );
  w.createParticles();w.populate();w.streamer=new WorldStreamer(w);w.streamer.update(1,PLAN.spawn.x,PLAN.spawn.z,{settings:{quality:'low'},depleted:{},day:1});
 }

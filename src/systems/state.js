@@ -305,6 +305,7 @@ export function gainXp(c, amount) {
 export function canPlace(s, x, z, collides, type='lamp', rotation=0, ignore=-1) {
  const location=s.location||'world', y=s.player.y||0, [w,d]=footprint(type,rotation);
  if(!Number.isFinite(x)||!Number.isFinite(z)) return false;
+ if(['house--40-24','house--8-24'].includes(location))return false;
  if(type==='car') return location==='world' && !vehicleBlocked({x,z,r:rotation},(a,b,radius)=>collides(a,b,radius)||s.buildings.some((o,i)=>i!==ignore&&furnitureBlocks(o,a,b,radius,0,'world'))||s.plots.some(p=>Math.abs(p.x-a)<1.15+radius&&Math.abs(p.z-b)<1.15+radius));
  // The indoor limits are the visible inner faces of the plaster walls: furniture may touch them exactly.
  if(location==='world' ? !(x-w/2>PLAN.farm.left && x+w/2<PLAN.farm.right && z-d/2>PLAN.farm.top && z+d/2<PLAN.farm.bottom) : !(Math.abs(x)+w/2<=8.8750001 && Math.abs(z)+d/2<=7.8750001)) return false;

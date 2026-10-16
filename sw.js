@@ -1,5 +1,7 @@
-const CACHE = "noverive-v73-driving";
+const CACHE = "noverive-v74-living-world";
 const FILES = [
+  "./src/systems/community.js",
+  "./src/rendering/community-ui.js",
   "./src/systems/vehicles.js",
   "./src/rendering/vehicles.js",
   "./assets/openworld/player-car.glb",
